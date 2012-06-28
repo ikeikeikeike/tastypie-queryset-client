@@ -1,27 +1,79 @@
-*.py[co]
+*.hi
+*.o
+*.aux
+*.bbl
+*.blg
+*.glg
+*.glo
+*.gls
+*.idx
+*.ilg
+*.ind
+*.ist
+*.log
+*.out
+*.toc
+*.fdb_latexmk
+*.pdfsync
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+\#*\#
+*.swp
+*.tmp
 
-# Packages
-*.egg
-*.egg-info
-dist
+##### vim
+*.orig
+
+##### python
+*.pyc
+*.pyo
+
+##### java
+*.class
+
+##### osx
+.DS_Store
+
+##### GAE
+.gaedata
+
+##### SCM subversion
+*.svn
+*.svn-base
+
+##### SCM git
+*.git
+
+##### SCM mercurial
+*.hg
+
+##### IDE jetbrains
+.idea
+*.iml
+
+##### TAG
+tags
+TAGS
+
+##### setup.py
 build
-eggs
-parts
-bin
-var
-sdist
-develop-eggs
-.installed.cfg
+dist
+django_spine.egg-info
 
-# Installer logs
-pip-log.txt
+##### scala
+lib/vetags/lang/scala/sources
 
-# Unit test / coverage reports
-.coverage
+#### clojure
+lib/vetags/lang/clojure/helloworld
+
+#### test
 .tox
+.coverage
+junit-py*
 
-#Translations
-*.mo
+#########
 
-#Mr Developer
-.mr.developer.cfg
+examples/django_spine/set.sh
+examples/django_spine/unset.sh
