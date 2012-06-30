@@ -3,10 +3,15 @@ import copy
 import urlparse
 import slumber
 import exceptions as exc
+import tastypie_client
 
 
 def urljoin(*args):
     return "{0}&".format(urlparse.urljoin(*args))
+
+
+def parse_id(resouce_uri):
+    return resouce_uri.split("/")[::-1][1]
 
 
 class Response(object):
@@ -26,19 +31,12 @@ class Response(object):
         if not "related_type" in self._schema["fields"][attr]:
             return self._response[attr]
 
-        # TODO: ManyToMany Another Client
-
         related_type = self._schema["fields"][attr]["related_type"]
-        if True:
-            # getattr(self.model._client, attr)(1).get()
-            return LazyResponse(model=self.model, attr=attr, url=self._response[attr])
-#            return # Object
+        if related_type == "to_many":
+            return QuerySet(model=self.model,
+                            query={"id__in": [parse_id(url) for url in self._response[attr]]})
         elif related_type == "to_one":
-            return  # Object
-        elif related_type == "many":
-            return  # Object
-        elif related_type == "for":
-            return  # Object
+            return LazyResponse(model=self.model, attr=attr, url=self._response[attr])
 
     def __getitem__(self, item):
         if item in self._response:
@@ -64,8 +62,7 @@ class LazyResponse(Response):
 
     def _fetch(self):
         if not self._response:
-            id_ = self._url.split("/")[::-1][1]
-            self._response = self.client(id_).get()
+            self._response = self.client(parse_id(self._url)).get()
         return self._response
 
     def __getattr__(self, *args, **kwargs):
@@ -91,6 +88,7 @@ class QuerySet(object):
         self._result_cache = None
         self._kwargs = kwargs
         self._response_class = kwargs.get("response_class", Response)
+        self._query = kwargs.get("query", dict())
 
     def __repr__(self):
         return "<QuerySet {0} ({1}/{2})>".format(
@@ -100,6 +98,8 @@ class QuerySet(object):
         return len(self._objects)
 
     def __iter__(self):
+        if 1 > self.__len__():
+            raise StopIteration()
         index = 0
         klass = copy.deepcopy(self)
         while 1:
@@ -110,33 +110,30 @@ class QuerySet(object):
                 klass = klass._next()
                 index = 0
 
+    def _clone(self, responses=None, klass=None, **kwargs):
+        if klass is None:
+            klass = self.__class__
+        kls = klass(model=self.model, responses=responses)
+        kls.__dict__.update(kwargs)
+        return kls
+
     def _next(self):
         """ request next page """
         if not self._meta["next"]:
             raise StopIteration()
         url = urljoin(self.model._base_url, self._meta["next"])
-        return self.__class__(self.model, self.model.client(url_override=url).get())
+        return self._clone(self.model.client(url_override=url).get())
 
     def _previous(self):
         """ request previous page """
         if not self._meta["previous"]:
             raise StopIteration()
         url = urljoin(self.model._base_url, self._meta["previous"])
-        return self.__class__(self.model, self.model.client(url_override=url).get())
+        return self._clone(self.model.client(url_override=url).get())
 
     def __getitem__(self, k):
-        # if isinstance(k, slice):
-            # qs = self._clone()
-            # if k.start is not None:
-                # start = int(k.start)
-            # else:
-                # start = None
-            # if k.stop is not None:
-                # stop = int(k.stop)
-            # else:
-                # stop = None
-            # qs.query.set_limits(start, stop)
-            # return k.step and list(qs)[::k.step] or qs
+
+        # TODO: slice
 
         try:
             return self._wrap_response(self._objects[k])
@@ -162,7 +159,13 @@ class QuerySet(object):
         return clone[0]
 
     def filter(self, *args, **kwargs):
-        return self.__class__(self.model, self.model.client.get(*args, **kwargs))
+        return self._filter(*args, **kwargs)
+
+    def _filter(self, *args, **kwargs):
+        kwargs_ = dict(self._query.items() + kwargs.items())
+        clone = self._clone(self.model.client.get(*args, **kwargs_))
+        clone._query = {"id__in": [parse_id(klass.resource_uri) for klass in clone]}
+        return clone
 
 
 class Manager(object):
