@@ -33,7 +33,7 @@ class Response(object):
 
         related_type = self._schema["fields"][attr]["related_type"]
         if related_type == "to_many":
-            return QuerySet(model=self.model,
+            return ManyToManyManager(model=self.model,
                             query={"id__in": [parse_id(url) for url in self._response[attr]]})
         elif related_type == "to_one":
             return LazyResponse(model=self.model, attr=attr, url=self._response[attr])
@@ -50,7 +50,6 @@ class Response(object):
 
 class LazyResponse(Response):
 
-    # TODO: ManyToMany Another Client
     def __init__(self, attr, url, *args, **kwargs):
         super(LazyResponse, self).__init__(response=None, *args, **kwargs)
         self._attr = attr
@@ -83,8 +82,8 @@ class QuerySet(object):
     def __init__(self, model, responses=None, **kwargs):
         self.model = model
         self._responses = responses
-        self._objects = responses and dict(enumerate(responses["objects"]))  # result_cache
-        self._meta = responses and responses["meta"]
+        self._meta = responses["meta"] if responses else {"total_count": 0}
+        self._objects = dict(enumerate(responses["objects"])) if responses else []
         self._result_cache = None
         self._kwargs = kwargs
         self._response_class = kwargs.get("response_class", Response)
@@ -167,6 +166,9 @@ class QuerySet(object):
         clone._query = {"id__in": [parse_id(klass.resource_uri) for klass in clone]}
         return clone
 
+    def all(self):
+        return self.filter()
+
 
 class Manager(object):
 
@@ -177,7 +179,7 @@ class Manager(object):
         return QuerySet(self.model)
 
     def all(self):
-        return self.get_query_set()
+        return self.get_query_set().all()
 
     def count(self):
         return self.get_query_set().count()
@@ -263,6 +265,14 @@ class Manager(object):
     def exists(self, *args, **kwargs):
         return self.get_query_set().exists(*args, **kwargs)
 
+class ManyToManyManager(Manager):
+
+    def __init__(self, query, **kwargs):
+        super(ManyToManyManager, self).__init__(**kwargs)
+        self._query = query
+
+    def get_query_set(self):
+        return QuerySet(self.model, query=self._query)
 
 class Model(object):
 

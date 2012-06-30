@@ -9,7 +9,9 @@ Welcome to Tastypie QuerySet Client's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 5
+
+   usage
 
 
 
