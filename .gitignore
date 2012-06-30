@@ -60,7 +60,7 @@ TAGS
 ##### setup.py
 build
 dist
-django_spine.egg-info
+tastypie_queryset_client.egg-info
 
 ##### scala
 lib/vetags/lang/scala/sources

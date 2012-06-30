@@ -130,14 +130,15 @@ class QuerySet(object):
         return self._clone(self.model.client(url_override=url).get())
 
     def __getitem__(self, index):
-        if isinstance(index, slice):
-            start = index.start
-            step = index.step
-            stop = index.stop
-            # TODO: slice QuerySet
-            return [self._wrap_response(self._objects[i]) for i in range(start, stop)]
         try:
-            return self._wrap_response(self._objects[index])
+            if isinstance(index, slice):
+                start = index.start
+                step = index.step
+                stop = index.stop
+                # TODO: slice QuerySet
+                return [self._wrap_response(self._objects[i]) for i in range(start, stop)]
+            else:
+                return self._wrap_response(self._objects[index])
         except KeyError  as err:
             raise IndexError(err)
 
@@ -165,7 +166,11 @@ class QuerySet(object):
     def _filter(self, *args, **kwargs):
         kwargs_ = dict(self._query.items() + kwargs.items())
         clone = self._clone(self.model.client.get(*args, **kwargs_))
-        clone._query = {"id__in": [parse_id(klass.resource_uri) for klass in clone[0:20]]}
+        # TODO: ↓↓↓ ManyToManyで 一件も relationがない場合の処理, 現状元のQuerySetの結果が返される ↓↓↓↓
+        # <QuerySet <class 'queryset_client.client.Response'> (0/0)>
+        clone._query = {
+            "id__in": [parse_id(klass.resource_uri) for klass in clone[0:len(clone)]]
+        }
         return clone
 
     def all(self):
@@ -279,12 +284,12 @@ class ManyToManyManager(Manager):
 class Model(object):
 
     def __init__(self, client, model_name, endpoint, schema, objects=None):
+        self.client = getattr(client, model_name)
+        self.objects = objects or Manager(self)
         self._client = client
         self._model_name = model_name
         self._endpoint = endpoint
         self._schema = schema
-        self.objects = objects or Manager(self)
-        self.client = getattr(client, model_name)
         self._schema_data = self.client.schema.get()
         self._base_url = client._store["base_url"]
 
