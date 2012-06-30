@@ -2,7 +2,7 @@ import os
 from setuptools import setup, find_packages
 # from setuptools.command.test import test
 
-version = '0.1.3'
+version = '0.2.1'
 name = 'tastypie-queryset-client'
 short_description = 'Client for Tastypie. Provide operation similar to the Django Model API'
 long_description = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
@@ -46,9 +46,10 @@ setup(
     description=short_description,
     long_description=long_description,
     classifiers=[
-       "Development Status :: 3 - Alpha",
-    #   "Development Status :: 4 - Beta",
+#       "Development Status :: 3 - Alpha",
+       "Development Status :: 4 - Beta",
        "Framework :: Django",
+       "Framework :: Tastypie",
        'Environment :: Console',
        "Environment :: Web Environment",
        "Intended Audience :: Developers",

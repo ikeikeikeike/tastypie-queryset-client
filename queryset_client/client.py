@@ -4,6 +4,9 @@ import urlparse
 import slumber
 
 
+__all__ = ["Client"]
+
+
 class ObjectDoesNotExist(Exception):
     pass
 
@@ -171,22 +174,33 @@ class QuerySet(object):
         return self._filter(*args, **kwargs)
 
     def _filter(self, *args, **kwargs):
-        kwargs_ = dict(self._query.items() + kwargs.items())
-        clone = self._clone(self.model.client.get(*args, **kwargs_))
+
         # TODO: ↓↓↓ ManyToManyで 一件も relationがない場合の処理, 現状元のQuerySetの結果が返される ↓↓↓↓
         # <QuerySet <class 'queryset_client.client.Response'> (0/0)>
-        clone._query = {
-            "id__in": [parse_id(klass.resource_uri) for klass in clone[0:len(clone)]]
-        }
-        return clone
 
-    def all(self):
-        return self.filter()
+        kwargs_ = dict(self._query.items() + kwargs.items())
+        clone = self._clone(self.model.client.get(**kwargs_))
+        clone._query.update({
+            "id__in": [parse_id(klass.resource_uri) for klass in clone[0:len(clone)]]
+        })
+        return clone
 
     def count(self):
         if self._objects:
             return self._meta["total_count"]
         return self.filter()._meta["total_count"]
+
+    def all(self):
+        return self.filter()
+
+    def order_by(self, *args, **kwargs):
+
+        # TODO: multiple order_by = "order_by=-body&order_by=id"
+
+        order = {"order_by": args[0]}
+        clone = self._filter(*args, **dict(order.items() + kwargs.items()))
+        clone._query.update(order)
+        return clone
 
 
 class Manager(object):
@@ -198,6 +212,7 @@ class Manager(object):
         return QuerySet(self.model)
 
     def all(self):
+        # TODO: return self.get_query_set()
         return self.get_query_set().all()
 
     def count(self):
@@ -215,8 +230,9 @@ class Manager(object):
     def get(self, *args, **kwargs):
         return self.get_query_set().get(*args, **kwargs)
 
-    def get_or_create(self, **kwargs):
-        return self.get_query_set().get_or_create(**kwargs)
+#    TODO: next implementation
+#    def get_or_create(self, **kwargs):
+#        return self.get_query_set().get_or_create(**kwargs)
 
     def create(self, **kwargs):
         return self.get_query_set().create(**kwargs)
@@ -262,11 +278,13 @@ class Manager(object):
 #    def prefetch_related(self, *args, **kwargs):
 #        return self.get_query_set().prefetch_related(*args, **kwargs)
 
-    def values(self, *args, **kwargs):
-        return self.get_query_set().values(*args, **kwargs)
+#    TODO: next implementation
+#    def values(self, *args, **kwargs):
+#        return self.get_query_set().values(*args, **kwargs)
 
-    def values_list(self, *args, **kwargs):
-        return self.get_query_set().values_list(*args, **kwargs)
+#    TODO: next implementation
+#    def values_list(self, *args, **kwargs):
+#        return self.get_query_set().values_list(*args, **kwargs)
 
 #    def update(self, *args, **kwargs):
 #        return self.get_query_set().update(*args, **kwargs)
@@ -283,8 +301,9 @@ class Manager(object):
 #    def using(self, *args, **kwargs):
 #        return self.get_query_set().using(*args, **kwargs)
 
-    def exists(self, *args, **kwargs):
-        return self.get_query_set().exists(*args, **kwargs)
+#    TODO: next implementation
+#    def exists(self, *args, **kwargs):
+#        return self.get_query_set().exists(*args, **kwargs)
 
 class ManyToManyManager(Manager):
 
