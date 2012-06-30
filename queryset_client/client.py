@@ -2,7 +2,14 @@
 import copy
 import urlparse
 import slumber
-import exceptions as exc
+
+
+class ObjectDoesNotExist(Exception):
+    pass
+
+
+class MultipleObjectsReturned(Exception):
+    pass
 
 
 def urljoin(*args):
@@ -139,7 +146,7 @@ class QuerySet(object):
                 return [self._wrap_response(self._objects[i]) for i in range(start, stop)]
             else:
                 return self._wrap_response(self._objects[index])
-        except KeyError  as err:
+        except KeyError as err:
             raise IndexError(err)
 
     def _wrap_response(self, dic):
@@ -152,11 +159,11 @@ class QuerySet(object):
         clone = self.filter(*args, **kwargs)
         num = len(clone)
         if num > 1:
-            raise exc.MultipleObjectsReturned(
+            raise MultipleObjectsReturned(
                 "get() returned more than one {0} -- it returned {1}! Lookup parameters were {2}"
                     .format(self.model._model_name, num, kwargs))
         elif not num:
-            raise exc.ObjectDoesNotExist("{0} matching query does not exist."
+            raise ObjectDoesNotExist("{0} matching query does not exist."
                     .format(self.model._model_name))
         return clone[0]
 
@@ -176,6 +183,11 @@ class QuerySet(object):
     def all(self):
         return self.filter()
 
+    def count(self):
+        if self._objects:
+            return self._meta["total_count"]
+        return self.filter()._meta["total_count"]
+
 
 class Manager(object):
 
@@ -191,14 +203,14 @@ class Manager(object):
     def count(self):
         return self.get_query_set().count()
 
-    def dates(self, *args, **kwargs):
-        return self.get_query_set().dates(*args, **kwargs)
+#    def dates(self, *args, **kwargs):
+#        return self.get_query_set().dates(*args, **kwargs)
 
-    def distinct(self, *args, **kwargs):
-        return self.get_query_set().distinct(*args, **kwargs)
+#    def distinct(self, *args, **kwargs):
+#        return self.get_query_set().distinct(*args, **kwargs)
 
-    def extra(self, *args, **kwargs):
-        return self.get_query_set().extra(*args, **kwargs)
+#    def extra(self, *args, **kwargs):
+#        return self.get_query_set().extra(*args, **kwargs)
 
     def get(self, *args, **kwargs):
         return self.get_query_set().get(*args, **kwargs)
@@ -209,44 +221,46 @@ class Manager(object):
     def create(self, **kwargs):
         return self.get_query_set().create(**kwargs)
 
-    def bulk_create(self, *args, **kwargs):
-        return self.get_query_set().bulk_create(*args, **kwargs)
+#    def bulk_create(self, *args, **kwargs):
+#        return self.get_query_set().bulk_create(*args, **kwargs)
 
     def filter(self, *args, **kwargs):
         return self.get_query_set().filter(*args, **kwargs)
 
-    def aggregate(self, *args, **kwargs):
-        return self.get_query_set().aggregate(*args, **kwargs)
+#    def aggregate(self, *args, **kwargs):
+#        return self.get_query_set().aggregate(*args, **kwargs)
 
-    def annotate(self, *args, **kwargs):
-        return self.get_query_set().annotate(*args, **kwargs)
+#    def annotate(self, *args, **kwargs):
+#        return self.get_query_set().annotate(*args, **kwargs)
 
-    def complex_filter(self, *args, **kwargs):
-        return self.get_query_set().complex_filter(*args, **kwargs)
+#    def complex_filter(self, *args, **kwargs):
+#        return self.get_query_set().complex_filter(*args, **kwargs)
 
-    def exclude(self, *args, **kwargs):
-        return self.get_query_set().exclude(*args, **kwargs)
+#    def exclude(self, *args, **kwargs):
+#        return self.get_query_set().exclude(*args, **kwargs)
 
-    def in_bulk(self, *args, **kwargs):
-        return self.get_query_set().in_bulk(*args, **kwargs)
+#    def in_bulk(self, *args, **kwargs):
+#        return self.get_query_set().in_bulk(*args, **kwargs)
 
-    def iterator(self, *args, **kwargs):
-        return self.get_query_set().iterator(*args, **kwargs)
+#    def iterator(self, *args, **kwargs):
+#        return self.get_query_set().iterator(*args, **kwargs)
 
-    def latest(self, *args, **kwargs):
-        return self.get_query_set().latest(*args, **kwargs)
+#    TODO: next implementation
+#    def latest(self, *args, **kwargs):
+#        return self.get_query_set().latest(*args, **kwargs)
 
     def order_by(self, *args, **kwargs):
         return self.get_query_set().order_by(*args, **kwargs)
 
-    def select_for_update(self, *args, **kwargs):
-        return self.get_query_set().select_for_update(*args, **kwargs)
+#    def select_for_update(self, *args, **kwargs):
+#        return self.get_query_set().select_for_update(*args, **kwargs)
 
-    def select_related(self, *args, **kwargs):
-        return self.get_query_set().select_related(*args, **kwargs)
+#    TODO: next implementation
+#    def select_related(self, *args, **kwargs):
+#        return self.get_query_set().select_related(*args, **kwargs)
 
-    def prefetch_related(self, *args, **kwargs):
-        return self.get_query_set().prefetch_related(*args, **kwargs)
+#    def prefetch_related(self, *args, **kwargs):
+#        return self.get_query_set().prefetch_related(*args, **kwargs)
 
     def values(self, *args, **kwargs):
         return self.get_query_set().values(*args, **kwargs)
@@ -254,20 +268,20 @@ class Manager(object):
     def values_list(self, *args, **kwargs):
         return self.get_query_set().values_list(*args, **kwargs)
 
-    def update(self, *args, **kwargs):
-        return self.get_query_set().update(*args, **kwargs)
+#    def update(self, *args, **kwargs):
+#        return self.get_query_set().update(*args, **kwargs)
+#
+#    def reverse(self, *args, **kwargs):
+#        return self.get_query_set().reverse(*args, **kwargs)
+#
+#    def defer(self, *args, **kwargs):
+#        return self.get_query_set().defer(*args, **kwargs)
 
-    def reverse(self, *args, **kwargs):
-        return self.get_query_set().reverse(*args, **kwargs)
+#    def only(self, *args, **kwargs):
+#        return self.get_query_set().only(*args, **kwargs)
 
-    def defer(self, *args, **kwargs):
-        return self.get_query_set().defer(*args, **kwargs)
-
-    def only(self, *args, **kwargs):
-        return self.get_query_set().only(*args, **kwargs)
-
-    def using(self, *args, **kwargs):
-        return self.get_query_set().using(*args, **kwargs)
+#    def using(self, *args, **kwargs):
+#        return self.get_query_set().using(*args, **kwargs)
 
     def exists(self, *args, **kwargs):
         return self.get_query_set().exists(*args, **kwargs)

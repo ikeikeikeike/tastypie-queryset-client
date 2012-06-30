@@ -2,8 +2,7 @@
 Usage
 ======
 
-Operation like a Django Model API.
-
+Client for Tastypie. Provide operation similar to the Django Model API.
 
 Schema
 -------
@@ -24,6 +23,16 @@ Get
     <your: {u"id": u"1", u"name": u"your", u"status": u"any"}>
 
 
+Count
+------
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> client.your.objects.count()
+    100
+
+
 Filter
 -------
 
@@ -32,6 +41,7 @@ Filter
     >>> client = Client("http://api.server.com/your/v1/")
     >>> client.your.objects.filter(name="your")
     <QuerySet <class 'Response'> (3/3)>
+
 
 Save
 -----
@@ -60,6 +70,7 @@ Relation
     <your: {u"id": u"1", u"name": u"name", u"status": u"any"}>
     <your: {u"id": u"2", u"name": u"name", u"status": u"any"}>
 
+
 ManyToMany
 ~~~~~~~~~~~~
 
@@ -87,8 +98,3 @@ ManyToMany
     <QuerySet <class 'Response'> (1/1)>
     <QuerySet <class 'Response'> (10/10)>
     <QuerySet <class 'Response'> (20/25)>
-
-
-
-
-
