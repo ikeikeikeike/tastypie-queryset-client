@@ -55,6 +55,28 @@ Save
     >>> your.save()  # save Your object.
 
 
+Order By
+---------
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> order = []
+    >>> for p in client.your.objects.order_by("-id"):
+    .  .  .         order.append(p)
+    .  .  .         print p.your
+    .  .  .
+    <your: {u"id": u"3", u"name": u"name3"}>
+    <your: {u"id": u"2", u"name": u"name2"}>
+    <your: {u"id": u"1", u"name": u"name1"}>
+    >>> for i, k in zip(client.your.objects.order_by("-id"), order):
+    .  .  .         print i.id == k.id
+    .  .  .
+    True
+    True
+    True
+
+
 Relation
 ---------
 
