@@ -3,7 +3,6 @@ import copy
 import urlparse
 import slumber
 import exceptions as exc
-import tastypie_client
 
 
 def urljoin(*args):
@@ -130,12 +129,15 @@ class QuerySet(object):
         url = urljoin(self.model._base_url, self._meta["previous"])
         return self._clone(self.model.client(url_override=url).get())
 
-    def __getitem__(self, k):
-
-        # TODO: slice
-
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            start = index.start
+            step = index.step
+            stop = index.stop
+            # TODO: slice QuerySet
+            return [self._wrap_response(self._objects[i]) for i in range(start, stop)]
         try:
-            return self._wrap_response(self._objects[k])
+            return self._wrap_response(self._objects[index])
         except KeyError  as err:
             raise IndexError(err)
 
@@ -163,7 +165,7 @@ class QuerySet(object):
     def _filter(self, *args, **kwargs):
         kwargs_ = dict(self._query.items() + kwargs.items())
         clone = self._clone(self.model.client.get(*args, **kwargs_))
-        clone._query = {"id__in": [parse_id(klass.resource_uri) for klass in clone]}
+        clone._query = {"id__in": [parse_id(klass.resource_uri) for klass in clone[0:20]]}
         return clone
 
     def all(self):
