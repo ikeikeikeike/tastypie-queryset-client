@@ -9,3 +9,11 @@ class QuerySetError(Exception):
 
     def __str__(self):
         return self.reason
+
+
+class ObjectDoesNotExist(Exception):
+    pass
+
+
+class MultipleObjectsReturned(Exception):
+    pass
