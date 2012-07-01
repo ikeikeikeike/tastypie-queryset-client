@@ -1,5 +1,6 @@
 from queryset_client.client import Client, FieldTypeError, ObjectDoesNotExist
-
+import string
+import random
 
 client = Client("http://192.168.57.132:8888/message/v1/")
 
@@ -24,7 +25,6 @@ def test_type2():
 def test_call1():
     subject = "subject call 1"
     body = "body call 1"
-
     message_obj = client.message(subject=subject, body=body)
     assert message_obj.subject == subject
     assert message_obj.body == body
@@ -43,7 +43,6 @@ def test_save1():
     """ (new) """
     subject = "subject save 1"
     body = "body save 1"
-
     message = client.message(subject=subject, body=body)
     message.save()
 
@@ -55,7 +54,6 @@ def test_save1():
 
 def test_save2():
     """ (update) """
-
     subject1 = "subject save 2"
     body1 = "body save 2"
     message = client.message(subject=subject1, body=body1)
@@ -66,7 +64,6 @@ def test_save2():
     message.subject = subject2
     message.body = body2
     message.save()
-
     try:
         client.message.objects.get(id=message.id, subject=subject1, body=body1)
     except ObjectDoesNotExist:
@@ -87,16 +84,20 @@ def test_save2():
 
 def test_save3():
     """ (update) for query_set """
-#    subject = "subject save 3"
-#    body = "body save 3"
-#    for message in client.message.objects.all():
-#        message.subject = subject
-#        message.body = body
-#        assert message.save()
-#
-#    for message in client.message.objects.all():
-#        assert message.subject == subject
-#        assert message.body == body
+    def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
+        return ''.join(random.choice(chars) for x in range(size))
+
+    subject = id_generator()
+    body = id_generator()
+
+    for message in client.message.objects.filter(id__in=xrange(20, 33)):
+        message.subject = subject
+        message.body = body
+        message.save()
+
+    for message in client.message.objects.filter(id__in=xrange(20, 33)):
+        assert message.subject == subject
+        assert message.body == body
 
 
 def test_save_rel1():
