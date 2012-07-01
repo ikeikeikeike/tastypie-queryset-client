@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime
 import copy
 import urlparse
 import slumber
@@ -12,6 +13,10 @@ class ObjectDoesNotExist(Exception):
 
 
 class MultipleObjectsReturned(Exception):
+    pass
+
+
+class FieldTypeError(Exception):
     pass
 
 
@@ -314,6 +319,7 @@ class ManyToManyManager(Manager):
     def get_query_set(self):
         return QuerySet(self.model, query=self._query)
 
+
 class Model(object):
 
     def __init__(self, client, model_name, endpoint, schema, objects=None):
@@ -325,12 +331,53 @@ class Model(object):
         self._schema = schema
         self._schema_data = self.client.schema.get()
         self._base_url = client._store["base_url"]
+        self._fields = dict()
 
     def __repr__(self):
         return "<{0}: {1}>".format(self._model_name, self._endpoint)
 
-    def schema(self):
-        return self._schema_data
+    def __call__(self, **kwargs):
+
+
+        return self
+
+    def __setattr__(self, attr, value):
+        super(Model, self).__setattr__(attr, value)
+        self._set_field(attr, value)
+
+    def _set_field(self, attr, value):
+        if hasattr(self, "_schema_data"):
+            if attr in self._schema_data["fields"]:
+                field_type = self._schema_data["fields"][attr]["type"]
+                check_type = False
+                value_ = None
+                try:
+                    if field_type == "string":
+                        check_type = isinstance(value, str)
+                        value_ = value
+                    elif field_type == "integer":
+                        check_type = True  # "".isdigit(), isinstance(value, int)
+                        value_ = value
+                    elif field_type == "datetime":
+                        check_type = True  # return isinstance(value, datetime)
+                        value_ = value
+                except Exception:
+                    check_type = False
+                finally:
+                    if check_type is not True:
+                        raise FieldTypeError(
+                            "Field Type Error: '{0}' is '{1}' type. ( Input '{2}:{3}' )"
+                                .format(attr, field_type, value_, type(value_).__name__))
+                self._fields[attr] = value_
+
+    def schema(self, *attrs):
+        if attrs:
+            s = self._schema_data
+            for attr in attrs:
+                s = s[attr]
+            return s
+        else:
+            return self._schema_data
 
     def save(self):
 #        self.client.put(); self.client.post()

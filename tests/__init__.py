@@ -7,3 +7,4 @@ from lazy import *
 from many_to_many import *
 from order_by import *
 from slice import *
+from model import *
