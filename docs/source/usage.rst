@@ -62,10 +62,12 @@ field
     >>> your
     <your: /your/v1/your/>
     >>> you = your(name="your")
-    >>> you
-    <your: /your/v1/your/ {'name': 'your'}>
+    >>> you.bankcode = 4649
+    <your: /your/v1/your/ {'name': 'your', 'bankcode': 4649}>
     >>> you.name
     'your'
+    >>> you.bankcode
+    4649
     >>> your.save()  # save Your object.
 
 Order By
