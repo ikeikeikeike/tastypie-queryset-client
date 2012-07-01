@@ -1,6 +1,9 @@
-import foreignkey
-import lazy
-import many_to_many
-import slice
-import count
-import order_by
+#import warnings
+#warnings.simplefilter('ignore', Warning)
+
+from count import *
+from foreignkey import *
+from lazy import *
+from many_to_many import *
+from order_by import *
+from slice import *
