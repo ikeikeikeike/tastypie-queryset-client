@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
+#from datetime import datetime
 import copy
 import urlparse
 import slumber
@@ -16,7 +16,7 @@ class MultipleObjectsReturned(Exception):
     pass
 
 
-class FieldTypeError(Exception):
+class FieldTypeError(TypeError):
     pass
 
 
@@ -324,7 +324,7 @@ class Model(object):
 
     def __init__(self, client, model_name, endpoint, schema, objects=None):
         self.client = getattr(client, model_name)
-        self.objects = objects or Manager(self)
+        self.objects = objects or Manager(self)  # TODO: LazyCall
         self._client = client
         self._model_name = model_name
         self._endpoint = endpoint
@@ -334,16 +334,25 @@ class Model(object):
         self._fields = dict()  # TODO: set field attribute
 
     def __repr__(self):
-        return "<{0}: {1} {2}>".format(self._model_name, self._endpoint, self._fields or "")
+        return "<{0}: {1}{2}>".format(self._model_name, self._endpoint,
+                                      " " + str(self._fields) if self._fields else "")
 
     def __call__(self, **kwargs):
-
-
-        return self
+        # TODO: LazyCall
+        for field in kwargs:
+            self.__setattr__(field, kwargs[field])
+            if not field in self._fields:
+                raise FieldTypeError("'{0}' is an invalid keyword argument for this function"
+                                     .format(field))
+        klass = copy.deepcopy(self)
+        for field in self._fields:
+            self.__delattr__(field)
+        self._fields = dict()
+        return klass
 
     def __setattr__(self, attr, value):
-        super(Model, self).__setattr__(attr, value)
         self._set_field(attr, value)
+        super(Model, self).__setattr__(attr, value)
 
     def _set_field(self, attr, value):
         if hasattr(self, "_schema_data"):

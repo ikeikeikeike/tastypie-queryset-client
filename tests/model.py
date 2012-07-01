@@ -22,8 +22,18 @@ def test_type2():
 
 
 def test_call1():
-    pass
+    subject = "subject"
+    body = "body"
+
+    message_obj = client.message(subject=subject, body=body)
+    assert message_obj.subject == subject
+    assert message_obj.body == body
 
 
 def test_call2():
-    pass
+    try:
+        client.message(errorfield="oha yo! oha yo!")
+    except FieldTypeError:
+        assert True
+    else:
+        assert False
