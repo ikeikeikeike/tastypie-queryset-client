@@ -1,4 +1,4 @@
-from queryset_client.client import Client, FieldTypeError
+from queryset_client.client import Client, FieldTypeError, ObjectDoesNotExist
 
 
 client = Client("http://192.168.57.132:8888/message/v1/")
@@ -22,8 +22,8 @@ def test_type2():
 
 
 def test_call1():
-    subject = "subject"
-    body = "body"
+    subject = "subject call 1"
+    body = "body call 1"
 
     message_obj = client.message(subject=subject, body=body)
     assert message_obj.subject == subject
@@ -37,3 +37,79 @@ def test_call2():
         assert True
     else:
         assert False
+
+
+def test_save1():
+    """ (new) """
+    subject = "subject save 1"
+    body = "body save 1"
+
+    message = client.message(subject=subject, body=body)
+    message.save()
+
+    message_ = client.message.objects.get(id=message.id, subject=subject, body=body)
+    assert message_.id == message.id
+    assert message_.subject == message.subject
+    assert message_.body == message.body
+
+
+def test_save2():
+    """ (update) """
+
+    subject1 = "subject save 2"
+    body1 = "body save 2"
+    message = client.message(subject=subject1, body=body1)
+    message.save()
+
+    subject2 = "subject save 2 update"
+    body2 = "body save 2 update"
+    message.subject = subject2
+    message.body = body2
+    message.save()
+
+    try:
+        client.message.objects.get(id=message.id, subject=subject1, body=body1)
+    except ObjectDoesNotExist:
+        assert True
+    else:
+        assert False
+
+    try:
+        message_ = client.message.objects.get(id=message.id, subject=subject2, body=body2)
+    except ObjectDoesNotExist:
+        assert False
+    else:
+        assert True
+        assert message_.id == message.id
+        assert message_.subject == message.subject
+        assert message_.body == message.body
+
+
+def test_save3():
+    """ (update) for query_set """
+#    subject = "subject save 3"
+#    body = "body save 3"
+#    for message in client.message.objects.all():
+#        message.subject = subject
+#        message.body = body
+#        assert message.save()
+#
+#    for message in client.message.objects.all():
+#        assert message.subject == subject
+#        assert message.body == body
+
+
+def test_save_rel1():
+    """ relation """
+#    subject = ""
+#    body = ""
+#    message = client.inbox_message(subject=subject, body=body)
+#    message.save()
+
+
+def test_save_many1():
+    """ many to many """
+#    subject = ""
+#    body = ""
+#    message = client.inbox_message_many(inbox_message=inbox_message)
+#    message.save()

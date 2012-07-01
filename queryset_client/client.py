@@ -339,16 +339,20 @@ class Model(object):
 
     def __call__(self, **kwargs):
         # TODO: LazyCall
-        for field in kwargs:
-            self.__setattr__(field, kwargs[field])
-            if not field in self._fields:
-                raise FieldTypeError("'{0}' is an invalid keyword argument for this function"
-                                     .format(field))
+        self._setattr(**kwargs)
+
         klass = copy.deepcopy(self)
         for field in self._fields:
             self.__delattr__(field)
         self._fields = dict()
         return klass
+
+    def _setattr(self, **kwargs):
+        for field in kwargs:
+            self.__setattr__(field, kwargs[field])
+            if not field in self._fields:
+                raise FieldTypeError("'{0}' is an invalid keyword argument for this function"
+                                     .format(field))
 
     def __setattr__(self, attr, value):
         self._set_field(attr, value)
@@ -357,12 +361,13 @@ class Model(object):
     def _set_field(self, attr, value):
         if hasattr(self, "_schema_data"):
             if attr in self._schema_data["fields"]:
+                #  TODO: type check and convert value.
                 field_type = self._schema_data["fields"][attr]["type"]
                 check_type = False
                 value_ = None
                 try:
                     if field_type == "string":
-                        check_type = isinstance(value, str)
+                        check_type = isinstance(value, (str, unicode))
                         value_ = value
                     elif field_type == "integer":
                         check_type = True  # "".isdigit(), isinstance(value, int)
@@ -389,8 +394,10 @@ class Model(object):
             return self._schema_data
 
     def save(self):
-#        self.client.put(); self.client.post()
-        pass
+        if hasattr(self, "id"):
+            self.client(self.id).put(self._fields)  # return bool
+        else:
+            self._setattr(**self.client.post(self._fields))
 
     def delete(self):
 #        self.client.delete()
