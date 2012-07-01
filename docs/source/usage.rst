@@ -54,6 +54,19 @@ Save
     <your: {u"id": u"2", u"name": u"name"}>
     >>> your.save()  # save Your object.
 
+field
+~~~~~~
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> your = client.your
+    >>> your
+    <your: /your/v1/your/>
+    >>> you = your(name="your")
+    >>> you
+    <your: /your/v1/your/ {'name': 'your'}>
+    >>> you.name
+    'your'
+    >>> your.save()  # save Your object.
 
 Order By
 ---------

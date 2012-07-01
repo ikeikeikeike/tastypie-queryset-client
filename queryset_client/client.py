@@ -331,10 +331,10 @@ class Model(object):
         self._schema = schema
         self._schema_data = self.client.schema.get()
         self._base_url = client._store["base_url"]
-        self._fields = dict()
+        self._fields = dict()  # TODO: set field attribute
 
     def __repr__(self):
-        return "<{0}: {1}>".format(self._model_name, self._endpoint)
+        return "<{0}: {1} {2}>".format(self._model_name, self._endpoint, self._fields or "")
 
     def __call__(self, **kwargs):
 
