@@ -1,3 +1,4 @@
+from slumber.exceptions import HttpClientError
 from queryset_client.client import Client, FieldTypeError, ObjectDoesNotExist
 import string
 import random
@@ -114,3 +115,36 @@ def test_save_many1():
 #    body = ""
 #    message = client.inbox_message_many(inbox_message=inbox_message)
 #    message.save()
+
+
+def test_delete1():
+    subject = "subject delete 1"
+    body = "body delete 1"
+    message = client.message(subject=subject, body=body)
+    message.save()
+
+    message_ = client.message.objects.get(id=message.id, subject=subject, body=body)
+    assert message_.id == message.id
+    assert message_.subject == message.subject
+    assert message_.body == message.body
+
+    message.delete()
+    try:
+        message.id
+    except AttributeError:
+        assert True
+    else:
+        assert False
+
+    try:
+        message_.delete()
+    except Exception:
+        assert True
+    else:
+        assert False
+    try:
+        message.id
+    except AttributeError:
+        assert True
+    else:
+        assert False

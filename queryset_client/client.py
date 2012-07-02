@@ -82,7 +82,8 @@ class Response(object):
         self.model.save()
 
     def delete(self):
-        return
+        self.model.delete()
+        self._response = dict()
 
 
 class LazyResponse(Response):
@@ -126,7 +127,7 @@ class QuerySet(object):
         return len(self._objects)
 
     def __iter__(self):
-        if 1 > self.__len__():
+        if self.__len__() < 1:
             raise StopIteration()
         index = 0
         klass = copy.deepcopy(self)
@@ -360,10 +361,14 @@ class Model(object):
         self._setattrs(**kwargs)  # TODO: LazyCall
 
         klass = copy.deepcopy(self)
-        for field in self._fields:
-            self.__delattr__(field)
+        self._clear_fields()
         self._fields = dict()
         return klass
+
+    def _clear_fields(self, klass=None):
+        c = klass or self
+        for field in c._fields:
+            c.__delattr__(field)
 
     def _clone(self, model_name, **kwargs):
         """ create `model_name` model """
@@ -390,7 +395,6 @@ class Model(object):
                 nullable = self._schema_store["fields"][attr]["nullable"]
                 blank = self._schema_store["fields"][attr]["blank"]
                 field_type = self._schema_store["fields"][attr]["type"]
-
                 check_type = False
                 value_ = value
                 try:
@@ -420,7 +424,8 @@ class Model(object):
                         raise FieldTypeError(
                             "Field Type Error: '{0}' is '{1}' type. ( Input '{2}:{3}' )"
                                 .format(attr, field_type, value_, type(value_).__name__))
-                self._fields[attr] = value_  # set field
+                # set field
+                self._fields[attr] = value_
 
     def schema(self, *attrs):
         if attrs:
@@ -438,8 +443,10 @@ class Model(object):
             self._setattrs(**self._client.post(self._fields))
 
     def delete(self):
-#        self._client.delete()
-        pass
+        assert hasattr(self, "id") is True, "{0} object can't be deleted because its {2} attribute \
+            is set to None.".format(self._model_name, self._schema_store["fields"]["id"]["type"])
+        self._client(self.id).delete()
+        self._clear_fields()
 
 
 class SchemaStore(dict):
@@ -457,17 +464,17 @@ class SchemaStore(dict):
         return self[name]
 
 
-class SchemaMeta(type):
+class ClientMeta(type):
 
     def __new__(cls, name, bases, attrs):
-        new_class = super(SchemaMeta, cls).__new__(cls, name, bases, attrs)
-        new_class._schema_store = getattr(new_class, "_schema_store", SchemaStore())
-        return new_class
+        klass = super(ClientMeta, cls).__new__(cls, name, bases, attrs)
+        klass._schema_store = getattr(klass, "_schema_store", SchemaStore())
+        return klass
 
 
 class Client(object):
 
-    __metaclass__ = SchemaMeta
+    __metaclass__ = ClientMeta
 
     def __init__(self, base_url, auth=None, client=None):
         self._main_client = (client or slumber.API)(base_url, auth)
@@ -483,9 +490,9 @@ class Client(object):
 
     def schema(self, model_name=None):
         if not model_name in self._schema_store:
-            request_url = self._url_gen("{0}/schema/".format(model_name)) if \
-                                                              model_name else self._base_url
-            self._schema_store[model_name] = self.request(request_url)
+            url = self._url_gen("{0}/schema/".format(model_name)) if model_name \
+                                                                  else self._base_url
+            self._schema_store[model_name] = self.request(url)
         return self._schema_store[model_name]
 
     def _url_gen(self, url):
