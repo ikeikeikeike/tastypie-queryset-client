@@ -26,45 +26,42 @@ def parse_id(resouce_uri):
 
 class Response(object):
 
-    def __init__(self, model, response=dict(), model_name=None, url=None):
+    def __init__(self, model, response=dict()):
         self.__dict__["_response"] = response
-        self._url = url
-        self._client = None
-        if model_name is None:
-            self.model = model(**response)
-        else:
-            self._client = getattr(model._main_client, model_name)
-            self.model = model._clone(model_name)
-            self._fetch()
+        self.model = model(**response)
         self._schema = self.model.schema()
+        self._url = ""
 
-    def _get_response(self):
+    def _get_res(self):
         return self.__dict__["_response"]
 
-    def _set_response(self, value):
+    def _set_res(self, value):
         self.__dict__["_response"] = value
 
+    def _get_response(self):
+        return self._res
+
+    def _set_response(self, value):
+        self._res = value
+
+    _res = property(_get_res, _set_res)
     _response = property(_get_response, _set_response)
 
     def __repr__(self):
-        return "<{0}: {1}{2}>".format(self.model._model_name, self._response,
-                                      self._url)
+        return "<{0}: {1} {2}>".format(self.model._model_name, self._url, self._res)
 
     def __getattr__(self, attr):
         if not attr in self._response:
             raise AttributeError(attr)
-
-        if not "related_type" in self._schema["fields"][attr]:
+        elif not "related_type" in self._schema["fields"][attr]:
             return self._response[attr]
 
         related_type = self._schema["fields"][attr]["related_type"]
         if related_type == "to_many":
             return ManyToManyManager(model=self.model,
                             query={"id__in": [parse_id(url) for url in self._response[attr]]})
-
         elif related_type == "to_one":
-            #  TODO: LazyResponse
-            return self.__class__(model=self.model, model_name=attr, url=self._response[attr])
+            return LazyResponse(model=self.model, model_name=attr, url=self._response[attr])
 
     def __getitem__(self, item):
         if item in self._response:
@@ -73,18 +70,13 @@ class Response(object):
             raise KeyError(item)
 
     def __contains__(self, attr):
-        return attr in self._response
+        return attr in self._res
 
     def __setattr__(self, attr, value):
         if self.__contains__(attr):
-            self._response[attr] = value
+            self._res[attr] = value
             self.model.__setattr__(attr, value)
         super(Response, self).__setattr__(attr, value)
-
-    def _fetch(self):
-        if not self._response:
-            self._response = self._client(parse_id(self._url)).get()
-        return self._response
 
     def save(self):
         self.model.save()
@@ -92,47 +84,37 @@ class Response(object):
     def delete(self):
         return
 
-#class LazyResponse(Response):
-#    """ convert response model and lazy response """
-#
-#    def __init__(self, model_name, url, *args, **kwargs):
-#        super(LazyResponse, self).__init__(*args, **kwargs)
-#        self.model = self.model._clone(model_name)
-#        self._model_name = model_name
-#        self._url = url
-#        self._client = getattr(self.model._main_client, model_name)
-#        self._fetch()
-#
-#    def __repr__(self):
-#        return "<{0}: {1}>".format(self._model_name, self._response or self._url)
-#
-#    def _fetch(self):
-#        if not self._response:
-#            self._response = self._client(parse_id(self._url)).get()
-#        return self._response
 
-#    def __getattr__(self, *args, **kwargs):
-#        self._fetch()
-#        return super(LazyResponse, self).__getattr__(*args, **kwargs)
-#
-#    def __getitem__(self, *args, **kwargs):
-#        self._fetch()
-#        return super(LazyResponse, self).__getitem__(*args, **kwargs)
-#
-#    def __contains__(self, *args, **kwargs):
-#        self._fetch()
-#        return super(LazyResponse, self).__contains__(*args, **kwargs)
+class LazyResponse(Response):
+    """ convert response model and lazy response """
+
+    def __init__(self, model_name, url, *args, **kwargs):
+        super(LazyResponse, self).__init__(*args, **kwargs)
+        self.model = self.model._clone(model_name)
+        self._client = getattr(self.model._main_client, model_name)
+        self._schema = self.model.schema()
+        self._url = url
+
+    def _get_response(self):
+        if not self._res:
+            self._res = self._client(parse_id(self._url)).get()
+        return self._res
+
+    def _set_response(self, value):
+        self._res = value
+
+    _response = property(_get_response, _set_response)
 
 
 class QuerySet(object):
 
     def __init__(self, model, responses=None, **kwargs):
         self.model = model
+        self._kwargs = kwargs
+        self._result_cache = None
         self._responses = responses
         self._meta = responses["meta"] if responses else {"total_count": 0}
         self._objects = dict(enumerate(responses["objects"])) if responses else []
-        self._result_cache = None
-        self._kwargs = kwargs
         self._response_class = kwargs.get("response_class", Response)
         self._query = kwargs.get("query", dict())
 
@@ -209,6 +191,14 @@ class QuerySet(object):
                     .format(self.model._model_name))
         return clone[0]
 
+    def count(self):
+        if self._objects:
+            return self._meta["total_count"]
+        return self.filter()._meta["total_count"]
+
+    def all(self):
+        return self.filter()
+
     def filter(self, *args, **kwargs):
         return self._filter(*args, **kwargs)
 
@@ -223,14 +213,6 @@ class QuerySet(object):
             "id__in": [parse_id(klass.resource_uri) for klass in clone[0:len(clone)]]
         })
         return clone
-
-    def count(self):
-        if self._objects:
-            return self._meta["total_count"]
-        return self.filter()._meta["total_count"]
-
-    def all(self):
-        return self.filter()
 
     def order_by(self, *args, **kwargs):
 
@@ -364,7 +346,7 @@ class Model(object):
         self._model_name = model_name
         self._endpoint = endpoint
         self._schema = schema
-        self._schema_data = self._client.schema.get()
+        self._schema_store = self._base_client.schema(model_name)
         self._base_url = self._main_client._store["base_url"]
         self._fields = dict()  # TODO: set field attribute
         self._strict_field = True
@@ -375,8 +357,7 @@ class Model(object):
                                       " " + str(self._fields) if self._fields else "")
 
     def __call__(self, **kwargs):
-        # TODO: LazyCall
-        self._setattrs(**kwargs)
+        self._setattrs(**kwargs)  # TODO: LazyCall
 
         klass = copy.deepcopy(self)
         for field in self._fields:
@@ -386,12 +367,9 @@ class Model(object):
 
     def _clone(self, model_name, **kwargs):
         """ create `model_name` model """
-        schema = self._base_client.schema()
-        s = schema[model_name]
-        endpoint = s["list_endpoint"]
-        schema = s["schema"]
+        s = self._base_client.schema()[model_name]
         klass = self.__class__(self._main_client, model_name,
-                               endpoint, schema, base_client=self._base_client)
+                               s["list_endpoint"], s["schema"], base_client=self._base_client)
         klass.__dict__.update(kwargs)
         return klass
 
@@ -407,11 +385,11 @@ class Model(object):
         super(Model, self).__setattr__(attr, value)
 
     def _setfield(self, attr, value):
-        if hasattr(self, "_schema_data"):
-            if attr in self._schema_data["fields"]:
-                nullable = self._schema_data["fields"][attr]["nullable"]
-                blank = self._schema_data["fields"][attr]["blank"]
-                field_type = self._schema_data["fields"][attr]["type"]
+        if hasattr(self, "_schema_store"):
+            if attr in self._schema_store["fields"]:
+                nullable = self._schema_store["fields"][attr]["nullable"]
+                blank = self._schema_store["fields"][attr]["blank"]
+                field_type = self._schema_store["fields"][attr]["type"]
 
                 check_type = False
                 value_ = value
@@ -446,12 +424,12 @@ class Model(object):
 
     def schema(self, *attrs):
         if attrs:
-            s = self._schema_data
+            s = self._schema_store
             for attr in attrs:
                 s = s[attr]
             return s
         else:
-            return self._schema_data
+            return self._schema_store
 
     def save(self):
         if hasattr(self, "id"):
@@ -464,7 +442,32 @@ class Model(object):
         pass
 
 
+class SchemaStore(dict):
+    """ schema cache """
+
+    def __setattr__(self, name, value):
+        self[name] = value
+
+    def __getattr__(self, name):
+        return self[name]
+
+    def quick_get(self, name, schema):
+        if not self.__contains__(name):
+            self.__setattr__(name, schema())
+        return self[name]
+
+
+class SchemaMeta(type):
+
+    def __new__(cls, name, bases, attrs):
+        new_class = super(SchemaMeta, cls).__new__(cls, name, bases, attrs)
+        new_class._schema_store = getattr(new_class, "_schema_store", SchemaStore())
+        return new_class
+
+
 class Client(object):
+
+    __metaclass__ = SchemaMeta
 
     def __init__(self, base_url, auth=None, client=None):
         self._main_client = (client or slumber.API)(base_url, auth)
@@ -479,11 +482,11 @@ class Client(object):
         return serializer.loads(requests.request(method, request_url).content)
 
     def schema(self, model_name=None):
-        if model_name:
-            request_url = self._url_gen("{0}/schema/".format(model_name))
-        else:
-            request_url = self._base_url
-        return self.request(request_url)
+        if not model_name in self._schema_store:
+            request_url = self._url_gen("{0}/schema/".format(model_name)) if \
+                                                              model_name else self._base_url
+            self._schema_store[model_name] = self.request(request_url)
+        return self._schema_store[model_name]
 
     def _url_gen(self, url):
         parse = urlparse.urlparse(url)

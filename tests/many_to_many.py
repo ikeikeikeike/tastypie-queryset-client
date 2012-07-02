@@ -1,4 +1,4 @@
-from queryset_client import Client
+from queryset_client.client import Client, ObjectDoesNotExist
 
 client = Client("http://192.168.57.132:8888/message/v1/")
 
@@ -7,9 +7,12 @@ def test_many1():
     from queryset_client.client import QuerySet
 
     for i in xrange(99, 110):
-        many = client.inbox_message_many.objects.get(id=i)
-        assert many.inbox_message
-        assert isinstance(many.inbox_message.filter(), QuerySet)
+        try:
+            many = client.inbox_message_many.objects.get(id=i)
+            assert many.inbox_message
+            assert isinstance(many.inbox_message.filter(), QuerySet)
+        except ObjectDoesNotExist, err:
+            assert True
 
 
 def test_many2():
