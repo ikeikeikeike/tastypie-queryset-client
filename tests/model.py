@@ -1,7 +1,7 @@
-from slumber.exceptions import HttpClientError
+#from slumber.exceptions import HttpClientError
 from queryset_client.client import Client, FieldTypeError, ObjectDoesNotExist
-import string
-import random
+from .utils import id_generator
+
 
 client = Client("http://192.168.57.132:8888/message/v1/")
 
@@ -85,8 +85,6 @@ def test_save2():
 
 def test_save3():
     """ (update) for query_set """
-    def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
-        return ''.join(random.choice(chars) for x in range(size))
 
     subject = id_generator()
     body = id_generator()

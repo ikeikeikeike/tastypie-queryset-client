@@ -193,6 +193,11 @@ class QuerySet(object):
     def get_pk(self, pk):
         return self._wrap_response(self.model._client(pk).get())
 
+    def count(self):
+        if self._objects:
+            return self._meta["total_count"]
+        return self.filter()._meta["total_count"]
+
     def get(self, *args, **kwargs):
         """ create
 
@@ -223,6 +228,9 @@ class QuerySet(object):
         obj.save()
         return obj
 
+    def all(self):
+        return self.filter()
+
     def filter(self, *args, **kwargs):
         return self._filter(*args, **kwargs)
 
@@ -247,13 +255,21 @@ class QuerySet(object):
         clone._query.update(order)
         return clone
 
-    def count(self):
-        if self._objects:
-            return self._meta["total_count"]
-        return self.filter()._meta["total_count"]
+    def get_or_create(self, **kwargs):
+        """
 
-    def all(self):
-        return self.filter()
+        :param kwargs: field
+        :rtype: tuple
+        :return: Returns a tuple of (object, created)
+        """
+        assert kwargs, 'get_or_create() must be passed at least one keyword argument'
+
+        try:
+            return self.get(**kwargs), False
+        except ObjectDoesNotExist:
+            obj = self.model(**kwargs)
+            obj.save()
+            return obj, True
 
 
 class Manager(object):
@@ -283,9 +299,8 @@ class Manager(object):
     def get(self, *args, **kwargs):
         return self.get_query_set().get(*args, **kwargs)
 
-#    TODO: next implementation
-#    def get_or_create(self, **kwargs):
-#        return self.get_query_set().get_or_create(**kwargs)
+    def get_or_create(self, **kwargs):
+        return self.get_query_set().get_or_create(**kwargs)
 
     def create(self, **kwargs):
         return self.get_query_set().create(**kwargs)
@@ -371,7 +386,8 @@ class ManyToManyManager(Manager):
 
 class Model(object):
 
-    def __init__(self, main_client, model_name, endpoint, schema, objects=None, base_client=None):
+    def __init__(self, main_client, model_name, endpoint, schema,
+                 objects=None, base_client=None):
         self._client = getattr(main_client, model_name)
         self._main_client = main_client
         self._base_client = base_client

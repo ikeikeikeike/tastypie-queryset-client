@@ -9,9 +9,13 @@ Schema
 
 ::
 
+    # base schema
     client = Client("http://api.server.com/your/v1/")
     client.schema()
 
+    # model schema
+    client.your.schema()
+    client.message.schema()
 
 Get
 ----
@@ -132,6 +136,20 @@ Create
     >>> your = client.your.objects.create(name="name")
     >>> your
     <your: {u"id": u"2", u"name": u"name"}>
+
+
+Get OR Create
+~~~~~~~~~~~~~~~
+
+Returns a tuple of (object, created)
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> client.your.objects.get_or_create(name="name")
+    (<your: {u"id": u"2", u"name": u"name"}>, True)
+    >>> client.your.objects.get_or_create(name="name")
+    (<your: {u"id": u"2", u"name": u"name"}>, False)
 
 
 Field
