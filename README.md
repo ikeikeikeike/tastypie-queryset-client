@@ -66,7 +66,7 @@ Soon...
 Documentation
 ==============
 
-[django-spine.readthedocs.org](http://tastypie-queryset-client.readthedocs.org)
+[tastypie-queryset-client.readthedocs.org](http://tastypie-queryset-client.readthedocs.org)
 
 
 License
