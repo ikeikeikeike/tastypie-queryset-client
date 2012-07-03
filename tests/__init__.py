@@ -3,6 +3,7 @@
 
 from count import *
 from create import *
+from exists import *
 from foreignkey import *
 from get_or_create import *
 from lazy import *

@@ -37,6 +37,19 @@ Count
     100
 
 
+Exists
+-------
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> client.your.objects.exists()
+    False
+    >>> queryset = client.your.objects.all()
+    >>> queryset.exists()
+    True
+
+
 Filter
 -------
 

@@ -126,7 +126,6 @@ class QuerySet(object):
     def __init__(self, model, responses=None, **kwargs):
         self.model = model
         self._kwargs = kwargs
-        self._result_cache = None
         self._responses = responses
         self._meta = responses["meta"] if responses else {"total_count": 0}
         self._objects = dict(enumerate(responses["objects"])) if responses else []
@@ -228,6 +227,39 @@ class QuerySet(object):
         obj.save()
         return obj
 
+    def get_or_create(self, **kwargs):
+        """
+
+        :param kwargs: field
+        :rtype: tuple
+        :return: Returns a tuple of (object, created)
+        """
+        assert kwargs, 'get_or_create() must be passed at least one keyword argument'
+
+        try:
+            return self.get(**kwargs), False
+        except ObjectDoesNotExist:
+            obj = self.model(**kwargs)
+            obj.save()
+            return obj, True
+
+    def exists(self):
+        return bool(self._responses)
+
+# TODO: fix! paste sample code in django.
+#    def values(self, *fields):
+#        return self._clone(klass=ValuesQuerySet, setup=True, _fields=fields)
+#
+#    def values_list(self, *fields, **kwargs):
+#        flat = kwargs.pop('flat', False)
+#        if kwargs:
+#            raise TypeError('Unexpected keyword arguments to values_list: %s'
+#                    % (kwargs.keys(),))
+#        if flat and len(fields) > 1:
+#            raise TypeError("'flat' is not valid when values_list is called with more than one field.")
+#        return self._clone(klass=ValuesListQuerySet, setup=True, flat=flat,
+#                _fields=fields)
+
     def all(self):
         return self.filter()
 
@@ -254,22 +286,6 @@ class QuerySet(object):
         clone = self._filter(*args, **dict(order.items() + kwargs.items()))
         clone._query.update(order)
         return clone
-
-    def get_or_create(self, **kwargs):
-        """
-
-        :param kwargs: field
-        :rtype: tuple
-        :return: Returns a tuple of (object, created)
-        """
-        assert kwargs, 'get_or_create() must be passed at least one keyword argument'
-
-        try:
-            return self.get(**kwargs), False
-        except ObjectDoesNotExist:
-            obj = self.model(**kwargs)
-            obj.save()
-            return obj, True
 
 
 class Manager(object):
@@ -369,9 +385,8 @@ class Manager(object):
 #    def using(self, *args, **kwargs):
 #        return self.get_query_set().using(*args, **kwargs)
 
-#    TODO: next implementation
-#    def exists(self, *args, **kwargs):
-#        return self.get_query_set().exists(*args, **kwargs)
+    def exists(self, *args, **kwargs):
+        return self.get_query_set().exists(*args, **kwargs)
 
 
 class ManyToManyManager(Manager):
@@ -529,9 +544,9 @@ class Client(object):
         self._method_gen()
 
     def request(self, url, method="GET"):
-        """ base requestor
+        """ base requester
 
-        * format below
+        * accept format below for url.
 
             - http://api.base.biz/base/v1/path/to/api/?id=1
             - /base/v1/path/to/api/?id=1
