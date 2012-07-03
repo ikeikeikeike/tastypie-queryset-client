@@ -21,12 +21,23 @@ class FieldTypeError(TypeError):
 
 
 def parse_id(resouce_uri):
+    """ url parsing
+
+    :param resource_uri:
+    :rtype: str
+    :return: primary id
+    """
     return resouce_uri.split("/")[::-1][1]
 
 
 class Response(object):
-
+    """ Proxy Model Class """
     def __init__(self, model, response=dict()):
+        """
+
+        :param model: The Model
+        :param response: response from Client Library
+        """
         self.__dict__["_response"] = response
         self.model = model(**response)
         self._schema = self.model.schema()
@@ -51,6 +62,7 @@ class Response(object):
         return "<{0}: {1} {2}>".format(self.model._model_name, self._url, self._res)
 
     def __getattr__(self, attr):
+        """ return Response Class """
         if not attr in self._response:
             raise AttributeError(attr)
         elif not "related_type" in self._schema["fields"][attr]:
@@ -79,9 +91,11 @@ class Response(object):
         super(Response, self).__setattr__(attr, value)
 
     def save(self):
+        """ save saved response """
         self.model.save()
 
     def delete(self):
+        """ remove saved response """
         self.model.delete()
         self._response = dict()
 
@@ -165,9 +179,8 @@ class QuerySet(object):
         try:
             if isinstance(index, slice):
                 start = index.start
-                step = index.step
                 stop = index.stop
-                # TODO: slice QuerySet
+                # step = index.step
                 return [self._wrap_response(self._objects[i]) for i in range(start, stop)]
             else:
                 return self._wrap_response(self._objects[index])
@@ -181,6 +194,13 @@ class QuerySet(object):
         return self._wrap_response(self.model._client(pk).get())
 
     def get(self, *args, **kwargs):
+        """ create
+
+        :param args: XXX no descript
+        :param kwargs: XXX no descript
+        :rtype: Response
+        :return: Response object.
+        """
         clone = self.filter(*args, **kwargs)
         num = len(clone)
         if num > 1:
@@ -192,13 +212,16 @@ class QuerySet(object):
                     .format(self.model._model_name))
         return clone[0]
 
-    def count(self):
-        if self._objects:
-            return self._meta["total_count"]
-        return self.filter()._meta["total_count"]
+    def create(self, **kwargs):
+        """ create
 
-    def all(self):
-        return self.filter()
+        :param kwargs: XXX No Description
+        :rtype: Model
+        :return: created object.
+        """
+        obj = self.model(**kwargs)
+        obj.save()
+        return obj
 
     def filter(self, *args, **kwargs):
         return self._filter(*args, **kwargs)
@@ -223,6 +246,14 @@ class QuerySet(object):
         clone = self._filter(*args, **dict(order.items() + kwargs.items()))
         clone._query.update(order)
         return clone
+
+    def count(self):
+        if self._objects:
+            return self._meta["total_count"]
+        return self.filter()._meta["total_count"]
+
+    def all(self):
+        return self.filter()
 
 
 class Manager(object):
@@ -482,6 +513,20 @@ class Client(object):
         self._method_gen()
 
     def request(self, url, method="GET"):
+        """ base requestor
+
+        * format below
+
+            - http://api.base.biz/base/v1/path/to/api/?id=1
+            - /base/v1/path/to/api/?id=1
+            - /v1/path/to/api/?id=1
+            - /path/to/api/?id=1
+
+        :param url: target url
+        :param method: GET or POST (default: GET)
+        :rtype: json
+        :return: json object
+        """
         request_url = self._url_gen(url)
         s = self._main_client._store
         requests = s["session"]
@@ -489,6 +534,12 @@ class Client(object):
         return serializer.loads(requests.request(method, request_url).content)
 
     def schema(self, model_name=None):
+        """ receive schema
+
+        :param model_name: resource class name
+        :rtype: dict
+        :return: schema dictionary
+        """
         if not model_name in self._schema_store:
             url = self._url_gen("{0}/schema/".format(model_name)) if model_name \
                                                                   else self._base_url

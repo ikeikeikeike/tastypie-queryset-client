@@ -51,11 +51,26 @@ Save
     >>> client = Client("http://api.server.com/your/v1/")
     >>> your = client.your(name="name")
     >>> your
-    <your: {u"id": u"2", u"name": u"name"}>
+    <your: {u"name": u"name"}>
     >>> your.save()  # save Your object.
+    >>> your
+    <your: {u"id": u"2", u"name": u"name"}>
+
+Create
+~~~~~~~
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> your = client.your.objects.create(name="name")
+    >>> your
+    <your: {u"id": u"2", u"name": u"name"}>
+
 
 field
 ~~~~~~
+
+::
 
     >>> client = Client("http://api.server.com/your/v1/")
     >>> your = client.your
