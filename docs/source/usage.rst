@@ -43,48 +43,6 @@ Filter
     <QuerySet <class 'Response'> (3/3)>
 
 
-Save
------
-
-::
-
-    >>> client = Client("http://api.server.com/your/v1/")
-    >>> your = client.your(name="name")
-    >>> your
-    <your: {u"name": u"name"}>
-    >>> your.save()  # save Your object.
-    >>> your
-    <your: {u"id": u"2", u"name": u"name"}>
-
-Create
-~~~~~~~
-
-::
-
-    >>> client = Client("http://api.server.com/your/v1/")
-    >>> your = client.your.objects.create(name="name")
-    >>> your
-    <your: {u"id": u"2", u"name": u"name"}>
-
-
-field
-~~~~~~
-
-::
-
-    >>> client = Client("http://api.server.com/your/v1/")
-    >>> your = client.your
-    >>> your
-    <your: /your/v1/your/>
-    >>> you = your(name="your")
-    >>> you.bankcode = 4649
-    <your: /your/v1/your/ {'name': 'your', 'bankcode': 4649}>
-    >>> you.name
-    'your'
-    >>> you.bankcode
-    4649
-    >>> your.save()  # save Your object.
-
 Order By
 ---------
 
@@ -150,3 +108,64 @@ ManyToMany
     <QuerySet <class 'Response'> (1/1)>
     <QuerySet <class 'Response'> (10/10)>
     <QuerySet <class 'Response'> (20/25)>
+
+
+Save
+-----
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> your = client.your(name="name")
+    >>> your
+    <your: {u"name": u"name"}>
+    >>> your.save()  # save Your object.
+    >>> your
+    <your: {u"id": u"2", u"name": u"name"}>
+
+Create
+~~~~~~~
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> your = client.your.objects.create(name="name")
+    >>> your
+    <your: {u"id": u"2", u"name": u"name"}>
+
+
+Field
+~~~~~~
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> your = client.your
+    >>> your
+    <your: /your/v1/your/>
+    >>> you = your(name="your")
+    >>> you.bankcode = 4649
+    <your: /your/v1/your/ {'name': 'your', 'bankcode': 4649}>
+    >>> you.name
+    'your'
+    >>> you.bankcode
+    4649
+    >>> your.save()  # save Your object.
+
+
+Delete
+--------
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> message = client.message(subject="subject delete 1", body="body delete 1")
+    >>> message.save()
+    >>> message.id
+    <message: {u"id": u"1", u"subject": u"subject delete 1", u"body": u"body delete 1"}>
+    >>> message.delete()  # remove Message object.
+    >>> try:
+    >>>     message.id
+    >>> except AttributeError:
+    >>>     assert True  # throw AttributeError.
+
