@@ -6,6 +6,7 @@ from create import *
 from exists import *
 from foreignkey import *
 from get_or_create import *
+from latest import *
 from lazy import *
 from many_to_many import *
 from model import *

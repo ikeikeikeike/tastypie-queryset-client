@@ -243,22 +243,14 @@ class QuerySet(object):
             obj.save()
             return obj, True
 
+    def latest(self, field_name=None):
+        assert bool(field_name), \
+            "latest() requires either a field_name parameter or 'get_latest_by' in the model"
+        clone = self._filter(**{"order_by": "-{0}".format(field_name), "limit": 1})
+        return clone[0]
+
     def exists(self):
         return bool(self._responses)
-
-# TODO: fix! paste sample code in django.
-#    def values(self, *fields):
-#        return self._clone(klass=ValuesQuerySet, setup=True, _fields=fields)
-#
-#    def values_list(self, *fields, **kwargs):
-#        flat = kwargs.pop('flat', False)
-#        if kwargs:
-#            raise TypeError('Unexpected keyword arguments to values_list: %s'
-#                    % (kwargs.keys(),))
-#        if flat and len(fields) > 1:
-#            raise TypeError("'flat' is not valid when values_list is called with more than one field.")
-#        return self._clone(klass=ValuesListQuerySet, setup=True, flat=flat,
-#                _fields=fields)
 
     def all(self):
         return self.filter()
@@ -345,9 +337,8 @@ class Manager(object):
 #    def iterator(self, *args, **kwargs):
 #        return self.get_query_set().iterator(*args, **kwargs)
 
-#    TODO: next implementation
-#    def latest(self, *args, **kwargs):
-#        return self.get_query_set().latest(*args, **kwargs)
+    def latest(self, *args, **kwargs):
+        return self.get_query_set().latest(*args, **kwargs)
 
     def order_by(self, *args, **kwargs):
         return self.get_query_set().order_by(*args, **kwargs)
@@ -362,11 +353,9 @@ class Manager(object):
 #    def prefetch_related(self, *args, **kwargs):
 #        return self.get_query_set().prefetch_related(*args, **kwargs)
 
-#    TODO: next implementation
 #    def values(self, *args, **kwargs):
 #        return self.get_query_set().values(*args, **kwargs)
 
-#    TODO: next implementation
 #    def values_list(self, *args, **kwargs):
 #        return self.get_query_set().values_list(*args, **kwargs)
 
@@ -490,6 +479,20 @@ class Model(object):
                 self._fields[attr] = value_
 
     def schema(self, *attrs):
+        """
+
+        usage ::
+
+            >>> self.schema("fields")
+            # out fields schema
+
+            >>> self.schema("fields", "id")
+            # out id schema
+
+        :param attrs:
+        :rtype: dict
+        :return: model schema
+        """
         if attrs:
             s = self._schema_store
             for attr in attrs:

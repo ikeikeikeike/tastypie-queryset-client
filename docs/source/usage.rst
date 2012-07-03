@@ -82,6 +82,18 @@ Order By
     True
 
 
+Latest
+---------
+
+::
+
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> latest = client.your.objects.latest("id")
+    >>> order = client.your.objects.order_by("-id")[0]
+    >>> latest.id == order.id
+    True
+
+
 Relation
 ---------
 
