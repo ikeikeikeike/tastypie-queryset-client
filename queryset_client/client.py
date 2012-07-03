@@ -313,6 +313,7 @@ class Manager(object):
     def create(self, **kwargs):
         return self.get_query_set().create(**kwargs)
 
+#    TODO: next implementation
 #    def bulk_create(self, *args, **kwargs):
 #        return self.get_query_set().bulk_create(*args, **kwargs)
 
@@ -346,7 +347,6 @@ class Manager(object):
 #    def select_for_update(self, *args, **kwargs):
 #        return self.get_query_set().select_for_update(*args, **kwargs)
 
-#    TODO: next implementation
 #    def select_related(self, *args, **kwargs):
 #        return self.get_query_set().select_related(*args, **kwargs)
 
