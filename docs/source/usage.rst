@@ -223,7 +223,7 @@ Pagination
     >>> client = Client("http://api.server.com/your/v1/")
     >>> messages = client.objects.all()
     >>>
-    >>> p = Paginator(message, 10)
+    >>> p = Paginator(message, 100)
     >>> p.count
     819
     >>> p.num_pages

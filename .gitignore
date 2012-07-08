@@ -75,6 +75,8 @@ mysamples
 .tox
 .coverage
 junit-py*
+api
+pytests
 
 #########
 
