@@ -11,8 +11,10 @@ Contents:
 .. toctree::
    :maxdepth: 5
 
+   client
+   model
+   manager
    usage
-
 
 
 Indices and tables

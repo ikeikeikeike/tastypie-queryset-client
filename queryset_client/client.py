@@ -175,6 +175,7 @@ class QuerySet(object):
         return self._clone(self._request(self._meta["previous"]))
 
     def __getitem__(self, index):
+
         try:
             if isinstance(index, slice):
                 start = index.start
@@ -481,15 +482,14 @@ class Model(object):
     def schema(self, *attrs):
         """
 
-        usage ::
+        * attrs example ::
 
-            >>> self.schema("fields")
-            # out fields schema
+                >>> self.schema("fields")
+                # out fields schema
+                >>> self.schema("fields", "id")
+                # out id schema
 
-            >>> self.schema("fields", "id")
-            # out id schema
-
-        :param attrs:
+        :param tuple attrs:
         :rtype: dict
         :return: model schema
         """
@@ -502,12 +502,20 @@ class Model(object):
             return self._schema_store
 
     def save(self):
+        """ save
+
+        :rtype: NoneType
+        """
         if hasattr(self, "id"):
             self._client(self.id).put(self._fields)  # return bool
         else:
             self._setattrs(**self._client.post(self._fields))
 
     def delete(self):
+        """ delete
+
+        :rtype: NoneType
+        """
         assert hasattr(self, "id") is True, "{0} object can't be deleted because its {2} attribute \
             is set to None.".format(self._model_name, self._schema_store["fields"]["id"]["type"])
         self._client(self.id).delete()
@@ -549,15 +557,15 @@ class Client(object):
     def request(self, url, method="GET"):
         """ base requester
 
-        * accept format below for url.
+        * accept format below for **url**.
 
-            - http://api.base.biz/base/v1/path/to/api/?id=1
-            - /base/v1/path/to/api/?id=1
-            - /v1/path/to/api/?id=1
-            - /path/to/api/?id=1
+          1. http://api.base.biz/base/v1/path/to/api/?id=1
+          #. /base/v1/path/to/api/?id=1
+          #. /v1/path/to/api/?id=1
+          #. /path/to/api/?id=1
 
-        :param url: target url
-        :param method: GET or POST (default: GET)
+        :param str url: target url
+        :param str method: GET or POST (default: GET)
         :rtype: json
         :return: json object
         """
@@ -570,7 +578,7 @@ class Client(object):
     def schema(self, model_name=None):
         """ receive schema
 
-        :param model_name: resource class name
+        :param str model_name: resource class name
         :rtype: dict
         :return: schema dictionary
         """
