@@ -32,12 +32,13 @@ def parse_id(resouce_uri):
 
 class Response(object):
     """ Proxy Model Class """
-    def __init__(self, model, response=dict()):
+    def __init__(self, model, response=None):
         """
 
         :param model: The Model
         :param response: response from Client Library
         """
+        response = response or dict()
         self.__dict__["_response"] = response
         self.model = model(**response)
         self._schema = self.model.schema()
@@ -123,14 +124,15 @@ class LazyResponse(Response):
 
 class QuerySet(object):
 
-    def __init__(self, model, responses=None, **kwargs):
+    def __init__(self, model, responses=None, query=None, **kwargs):
         self.model = model
         self._kwargs = kwargs
-        self._responses = responses
-        self._meta = responses["meta"] if responses else {"total_count": 0}
-        self._objects = dict(enumerate(responses["objects"])) if responses else []
+        self._query = query or dict()
         self._response_class = kwargs.get("response_class", Response)
-        self._query = kwargs.get("query", dict())
+        self._set_objects(responses)  # set _responses, _meta, _objects
+#        self._responses = responses
+#        self._meta = {}
+#        self._objects = []
 
     def __repr__(self):
         return "<QuerySet {0} ({1}/{2})>".format(
@@ -153,11 +155,12 @@ class QuerySet(object):
                 index = 0
 
     def _clone(self, responses=None, klass=None, **kwargs):
-        if klass is None:
-            klass = self.__class__
-        k = klass(model=self.model, responses=responses)
-        k.__dict__.update(kwargs)
-        return k
+        klass = klass or self.__class__
+        responses = responses or self._responses
+
+        clone = klass(model=self.model, responses=responses, query=self._query)
+        clone.__dict__.update(kwargs)
+        return clone
 
     def _request(self, url):
         return self.model._base_client.request(url)
@@ -175,17 +178,37 @@ class QuerySet(object):
         return self._clone(self._request(self._meta["previous"]))
 
     def __getitem__(self, index):
-
         try:
             if isinstance(index, slice):
-                start = index.start
+#                start = index.start
                 stop = index.stop
                 # step = index.step
-                return [self._wrap_response(self._objects[i]) for i in range(start, stop)]
-            else:
-                return self._wrap_response(self._objects[index])
+
+                responses = self._responses
+                if stop > len(self):
+                    query = dict(self._query.items() + {"limit": stop}.items())
+                    responses = self._get_responses(**query)
+
+                clone = self._clone(responses)
+                clone._query.update({"id__in": clone._get_ids()})
+                return clone
+
+            if not self._responses:
+                self._fill_objects()
+            return self._wrap_response(self._objects[index])
         except KeyError as err:
             raise IndexError(err)
+
+    def _fill_objects(self):
+        self._set_objects(self._get_responses())
+
+    def _set_objects(self, responses):
+        self._responses = responses
+        self._meta = responses["meta"] if responses else {"total_count": 0}
+        self._objects = dict(enumerate(responses["objects"])) if responses else []
+
+    def _get_responses(self, **kwargs):
+        return self.model._client.get(**kwargs)
 
     def _wrap_response(self, dic):
         return self._response_class(self.model, dic)
@@ -194,9 +217,10 @@ class QuerySet(object):
         return self._wrap_response(self.model._client(pk).get())
 
     def count(self):
-        if self._objects:
+        if self._responses:
             return self._meta["total_count"]
-        return self.filter()._meta["total_count"]
+        self._fill_objects()
+        return self._meta["total_count"]
 
     def get(self, *args, **kwargs):
         """ create
@@ -251,24 +275,28 @@ class QuerySet(object):
         return clone[0]
 
     def exists(self):
-        return bool(self._responses)
+        if not self._responses:
+            self._fill_objects()
+        return bool(self._objects)
 
     def all(self):
-        return self.filter()
+        return self._clone()
 
     def filter(self, *args, **kwargs):
         return self._filter(*args, **kwargs)
+
+    def _get_ids(self):
+        return [parse_id(self._objects[i]["resource_uri"]) for i in self._objects]
 
     def _filter(self, *args, **kwargs):
 
         # TODO: ↓↓↓ ManyToManyで 一件も relationがない場合の処理, 現状元のQuerySetの結果が返される ↓↓↓↓
         # <QuerySet <class 'queryset_client.client.Response'> (0/0)>
 
-        kwargs_ = dict(self._query.items() + kwargs.items())
-        clone = self._clone(self.model._client.get(**kwargs_))
-        clone._query.update({
-            "id__in": [parse_id(klass.resource_uri) for klass in clone[0:len(clone)]]
-        })
+        query = dict(self._query.items() + kwargs.items())
+        clone = self._clone(self._get_responses(**query))
+        clone._query.update({"id__in": clone._get_ids()})
+
         return clone
 
     def order_by(self, *args, **kwargs):
@@ -290,8 +318,7 @@ class Manager(object):
         return QuerySet(self.model)
 
     def all(self):
-        # TODO: return self.get_query_set()
-        return self.get_query_set().all()
+        return self.get_query_set()
 
     def count(self):
         return self.get_query_set().count()

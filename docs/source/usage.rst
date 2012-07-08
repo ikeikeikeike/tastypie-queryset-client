@@ -212,3 +212,46 @@ Delete
     >>> except AttributeError:
     >>>     assert True  # throw AttributeError.
 
+
+Pagination
+------------
+
+::
+
+    >>> from django.core.paginator import Paginator
+    >>>
+    >>> client = Client("http://api.server.com/your/v1/")
+    >>> messages = client.objects.all()
+    >>>
+    >>> p = Paginator(message, 10)
+    >>> p.count
+    819
+    >>> p.num_pages
+    9
+    >>> p.page_range
+    [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    page1 = p.page(1)
+    >>> page1.object_list
+    <QuerySet <class 'Response'> (100/819)>
+    >>> page2 = p.page(2)
+    >>> page2
+    <Page 2 of 9>
+    >>> page2.object_list
+    <QuerySet <class 'Response'> (200/819)>
+    >>> page2.has_next()
+    True
+    >>> page2.has_previous()
+    True
+    >>> page2.has_other_pages()
+    True
+    >>> page2.next_page_number()
+    3
+    >>> page2.previous_page_number()
+    1
+    >>> page2.start_index() # The 1-based index of the first item on this page
+    101
+    >>> page2.end_index() # The 1-based index of the last item on this page
+    200
+    >>> p.page(3)
+    <Page 3 of 9>
+

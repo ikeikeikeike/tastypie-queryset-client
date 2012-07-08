@@ -68,6 +68,9 @@ lib/vetags/lang/scala/sources
 #### clojure
 lib/vetags/lang/clojure/helloworld
 
+#### sample
+mysamples
+
 #### test
 .tox
 .coverage

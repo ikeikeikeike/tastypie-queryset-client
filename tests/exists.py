@@ -5,5 +5,10 @@ client = Client("http://192.168.57.132:8888/message/v1/")
 
 
 def test_exists1():
-    assert client.message.objects.exists() is False
-    assert client.message.objects.all().exists() is True
+    message = client.message.objects.exists()
+    assert message is True
+    message = client.message.objects.all().exists()
+    assert message is True
+    message = client.message.objects.filter(id=10000000)
+    exists = message.exists()
+    assert exists is False
