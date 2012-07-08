@@ -129,20 +129,18 @@ class QuerySet(object):
         self._kwargs = kwargs
         self._query = query or dict()
         self._response_class = kwargs.get("response_class", Response)
-        self._set_objects(responses)  # set _responses, _meta, _objects
-#        self._responses = responses
-#        self._meta = {}
-#        self._objects = []
+        self._set_objects(responses)  # set _responses, _meta, _objects, _objects_count
 
     def __repr__(self):
         return "<QuerySet {0} ({1}/{2})>".format(
-                    self._response_class, self.__len__(), self._meta["total_count"])
+                    self._response_class, self._objects_count, len(self))
 
     def __len__(self):
-        return len(self._objects)
+        """ total count """
+        return self.count()
 
     def __iter__(self):
-        if self.__len__() < 1:
+        if len(self) < 1:
             raise StopIteration()
         index = 0
         klass = copy.deepcopy(self)
@@ -185,7 +183,7 @@ class QuerySet(object):
                 # step = index.step
 
                 responses = self._responses
-                if stop > len(self):
+                if stop > self._objects_count:
                     query = dict(self._query.items() + {"limit": stop}.items())
                     responses = self._get_responses(**query)
 
@@ -204,8 +202,9 @@ class QuerySet(object):
 
     def _set_objects(self, responses):
         self._responses = responses
-        self._meta = responses["meta"] if responses else {"total_count": 0}
+        self._meta = responses and responses["meta"]
         self._objects = dict(enumerate(responses["objects"])) if responses else []
+        self._objects_count = len(self._objects)
 
     def _get_responses(self, **kwargs):
         return self.model._client.get(**kwargs)
@@ -231,7 +230,7 @@ class QuerySet(object):
         :return: Response object.
         """
         clone = self.filter(*args, **kwargs)
-        num = len(clone)
+        num = len(clone._objects)
         if num > 1:
             raise MultipleObjectsReturned(
                 "get() returned more than one {0} -- it returned {1}! Lookup parameters were {2}"
