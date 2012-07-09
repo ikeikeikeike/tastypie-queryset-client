@@ -103,6 +103,24 @@ class ModelTestCase(TestServerTestCase):
         for message in self.client.message.objects.filter(id__in=xrange(20, 33)):
             self.assertTrue(message.subject == subject)
             self.assertTrue(message.body == body)
+
+    def test_object_save1(self):
+        """ object save
+        """
+        for i in xrange(0, 12):
+            message = self.client.message()
+            message.subject = id_generator()
+            message.body = id_generator()
+            message.save()
+
+            inbox = self.client.inbox()
+            inbox.did = id_generator()
+            inbox.save()
+
+            inbox_message = self.client.inbox_message()
+            inbox_message.message = message
+            inbox_message.inbox = inbox
+            inbox_message.save()  # TODO: save success
         
     def test_save_rel1(self):
         """ relation """
@@ -113,11 +131,10 @@ class ModelTestCase(TestServerTestCase):
         
     def test_save_many1(self):
         """ many to many """
-    #    subject = ""
-    #    body = ""
-    #    message = self.client.inbox_message_many(inbox_message=inbox_message)
-    #    message.save()
-        
+#    inbox_message_many = self.client.inbox_message_many()
+#    inbox_message_many.inbox_message = inbox_message
+#    inbox_message_many.save()
+
     def test_delete1(self):
         subject = "subject delete 1"
         body = "body delete 1"

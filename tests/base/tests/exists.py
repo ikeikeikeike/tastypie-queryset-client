@@ -4,12 +4,15 @@ from testcases import (
     TestServerTestCase,
     get_client
 )
+from .utils import FixtureMixin
 
-class ExistsTestCase(TestServerTestCase):
+
+class ExistsTestCase(FixtureMixin, TestServerTestCase):
 
     def setUp(self):
         self.start_test_server()
         self.client = get_client()
+        super(ExistsTestCase, self).setUp()
 
     def tearDown(self):
         self.stop_test_server()

@@ -4,20 +4,21 @@ from testcases import (
     TestServerTestCase,
     get_client
 )
+from .utils import FixtureMixin
 
 
-class ForeignkeyTestCase(TestServerTestCase):
+class ForeignkeyTestCase(FixtureMixin, TestServerTestCase):
 
     def setUp(self):
         self.start_test_server()
         self.client = get_client()
+        super(ForeignkeyTestCase, self).setUp()
 
     def tearDown(self):
         self.stop_test_server()
 
     # TODO: input prepend data
     def test_foreignkey1(self):
-
         if 0 < self.client.inbox_message.objects.count():
             self.assertTrue(self.client.inbox_message.objects.all()[0].message.id)
             self.assertTrue(self.client.inbox_message.objects.all()[1].message.id)

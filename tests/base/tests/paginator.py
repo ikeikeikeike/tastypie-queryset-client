@@ -3,6 +3,7 @@ from testcases import (
     TestServerTestCase,
     get_client
 )
+from .utils import id_generator
 
 
 class PaginatorTestCase(TestServerTestCase):
@@ -10,6 +11,21 @@ class PaginatorTestCase(TestServerTestCase):
     def setUp(self):
         self.start_test_server()
         self.client = get_client()
+        for i in xrange(0, 100):
+            message = self.client.message()
+            message.subject = id_generator()
+            message.body = id_generator()
+            message.save()
+
+            inbox = self.client.inbox()
+            inbox.did = id_generator()
+            inbox.save()
+
+            inbox_message = self.client.inbox_message()
+            inbox_message.message = message.resource_uri
+            inbox_message.inbox = inbox.resource_uri
+            inbox_message.save()
+
 
     def tearDown(self):
         self.stop_test_server()
@@ -17,7 +33,7 @@ class PaginatorTestCase(TestServerTestCase):
     def test_paginator(self):
         message = self.client.message.objects.all()
 
-        p = Paginator(message, 10)
+        p = Paginator(message,25)
         self.assertTrue(p.count)
         self.assertTrue(p.num_pages)
         self.assertTrue(p.page_range)

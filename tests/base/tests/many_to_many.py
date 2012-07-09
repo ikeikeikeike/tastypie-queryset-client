@@ -18,6 +18,7 @@ class ManyToManyTestCase(TestServerTestCase):
         self.stop_test_server()
 
     def test_many1(self):
+        assert False
         for i in xrange(99, 110):
             try:
                 many = self.client.inbox_message_many.objects.get(id=i)
@@ -27,6 +28,7 @@ class ManyToManyTestCase(TestServerTestCase):
                 self.assertTrue(True)
 
     def test_many2(self):
+        assert False
         nums = xrange(99, 110)
         for i, num in zip(self.client.inbox_message_many.objects.filter(id__in=nums), nums):
             self.assertTrue(i.inbox_message)
@@ -34,6 +36,7 @@ class ManyToManyTestCase(TestServerTestCase):
 
 
     def test_many3(self):
+        assert False
         nums = xrange(99, 102)
         for i, num in zip(self.client.inbox_message_many.objects.filter(id__in=nums), nums):
             self.assertTrue(i.inbox_message.all())
@@ -41,6 +44,7 @@ class ManyToManyTestCase(TestServerTestCase):
 
 
     def test_many4(self):
+        assert False
         for i in self.client.inbox_message_many.objects.all():
             self.assertTrue(i)
 

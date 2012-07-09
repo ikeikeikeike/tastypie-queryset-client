@@ -2,21 +2,21 @@ from testcases import (
     TestServerTestCase,
     get_client
 )
+from .utils import FixtureMixin
 
 
-class LazyTestCase(TestServerTestCase):
+class LazyTestCase(FixtureMixin, TestServerTestCase):
 
     def setUp(self):
         self.start_test_server()
         self.client = get_client()
+        super(LazyTestCase, self).setUp()
 
     def tearDown(self):
         self.stop_test_server()
 
-    # TODO: input prepend data
     def test_lazy1(self):
         fl = self.client.inbox_message_many.objects.filter()
-        if 0 < len(fl):
-            self.assertTrue(fl)
-            for f in fl:
-                self.assertTrue(f)
+        self.assertTrue(fl)
+        for f in fl:
+            self.assertTrue(f)
