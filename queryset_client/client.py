@@ -128,6 +128,7 @@ class QuerySet(object):
         self.model = model
         self._kwargs = kwargs
         self._query = query or dict()
+        self._iteration = True
         self._response_class = kwargs.get("response_class", Response)
         self._set_objects(responses)  # set _responses, _meta, _objects, _objects_count
 
@@ -165,29 +166,30 @@ class QuerySet(object):
 
     def _next(self):
         """ request next page """
-        if not self._meta["next"]:
+        if not self._meta["next"] or self._iteration is False:
             raise StopIteration()
         return self._clone(self._request(self._meta["next"]))
 
     def _previous(self):
         """ request previous page """
-        if not self._meta["previous"]:
+        if not self._meta["previous"] or self._iteration is False:
             raise StopIteration()
         return self._clone(self._request(self._meta["previous"]))
 
     def __getitem__(self, index):
         try:
             if isinstance(index, slice):
-#                start = index.start
+                start = index.start or 0
                 stop = index.stop
                 # step = index.step
 
                 responses = self._responses
                 if stop > self._objects_count:
-                    query = dict(self._query.items() + {"limit": stop}.items())
+                    query = dict(
+                        self._query.items() + {"limit": stop - start, "offset": start}.items())
                     responses = self._get_responses(**query)
 
-                clone = self._clone(responses)
+                clone = self._clone(responses, _iteration=False)
                 clone._query.update({"id__in": clone._get_ids()})
                 return clone
 
