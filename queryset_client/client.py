@@ -421,6 +421,9 @@ class ManyToManyManager(Manager):
     def get_query_set(self):
         return QuerySet(self.model, query=self._query)
 
+    def add(self):
+        #  TODO: ManyToMany Manager  parent_obj.add(related_object)
+        pass
 
 class Model(object):
 
@@ -526,7 +529,13 @@ class Model(object):
                 elif field_type == "datetime":
                     return value
                 elif field_type == "related":
-                    return getattr(value, "resource_uri", value)
+                    value_ = getattr(value, "resource_uri", value)
+                    related_type = self._schema_store["fields"][field]["related_type"]
+                    if related_type == "to_many":
+                        #  TODO: ManyToMany Manager  parent_obj.add(related_object)
+                        return value_ if isinstance(value_, (list, tuple)) else [value_]
+                    else:
+                        return value_
                 elif field_type == "boolean":
                     return value
                 else:
