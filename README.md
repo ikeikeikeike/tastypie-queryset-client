@@ -60,8 +60,9 @@ Delete
 
 Setup
 =====
-
-Soon...
+```bash
+$ pip install tastypie-queryset-client
+```
 
 Documentation
 ==============

@@ -32,6 +32,7 @@ class StoppableWSGIServer(basehttp.WSGIServer):
         except socket.timeout:
             raise
 
+
 class TestServerThread(threading.Thread):
     """Thread for running a http server while tests are running."""
 
