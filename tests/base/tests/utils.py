@@ -21,10 +21,10 @@ class FixtureMixin(object):
             inbox.save()
 
             inbox_message = self.client.inbox_message()
-            inbox_message.message = message.resource_uri
-            inbox_message.inbox = inbox.resource_uri
+            inbox_message.message = message
+            inbox_message.inbox = inbox
             inbox_message.save()
 
 #            inbox_message_many = self.client.inbox_message_many()
-#            inbox_message_many.inbox_message = inbox_message.resource_uri
+#            inbox_message_many.inbox_message = inbox_message
 #            inbox_message_many.save()

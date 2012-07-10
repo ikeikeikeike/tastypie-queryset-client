@@ -128,9 +128,9 @@ class QuerySet(object):
         self.model = model
         self._kwargs = kwargs
         self._query = query or dict()
-        self._iteration = True
         self._response_class = kwargs.get("response_class", Response)
         self._set_objects(responses)  # set _responses, _meta, _objects, _objects_count
+        self._iteration_num = None
 
     def __repr__(self):
         return "<QuerySet {0} ({1}/{2})>".format(
@@ -144,12 +144,16 @@ class QuerySet(object):
         if len(self) < 1:
             raise StopIteration()
         index = 0
+        length = 0
         klass = copy.deepcopy(self)
         while 1:
             try:
                 yield klass._wrap_response(klass._objects[index])
                 index += 1
+                length += 1
             except KeyError:
+                if self._iteration_num <= length and self._iteration_num is not None:
+                    raise StopIteration()
                 klass = klass._next()
                 index = 0
 
@@ -166,30 +170,29 @@ class QuerySet(object):
 
     def _next(self):
         """ request next page """
-        if not self._meta["next"] or self._iteration is False:
+        if not self._meta["next"]:
             raise StopIteration()
         return self._clone(self._request(self._meta["next"]))
 
     def _previous(self):
         """ request previous page """
-        if not self._meta["previous"] or self._iteration is False:
+        if not self._meta["previous"]:
             raise StopIteration()
         return self._clone(self._request(self._meta["previous"]))
 
     def __getitem__(self, index):
         try:
             if isinstance(index, slice):
+                # step = index.step
                 start = index.start or 0
                 stop = index.stop
-                # step = index.step
+                limit = stop - start
 
-                responses = self._responses
-                if stop > self._objects_count:
-                    query = dict(
-                        self._query.items() + {"limit": stop - start, "offset": start}.items())
-                    responses = self._get_responses(**query)
+                self._iteration_num = limit
+                query = dict(self._query.items() + {"limit": limit, "offset": start}.items())
+                responses = self._get_responses(**query)
 
-                clone = self._clone(responses, _iteration=False)
+                clone = self._clone(responses, _iteration_num=self._iteration_num)
                 clone._query.update({"id__in": clone._get_ids()})
                 return clone
 
@@ -293,6 +296,8 @@ class QuerySet(object):
 
         # TODO: ↓↓↓ ManyToManyで 一件も relationがない場合の処理, 現状元のQuerySetの結果が返される ↓↓↓↓
         # <QuerySet <class 'queryset_client.client.Response'> (0/0)>
+
+        # TODO: id__in 上書きされる
 
         query = dict(self._query.items() + kwargs.items())
         clone = self._clone(self._get_responses(**query))
@@ -469,17 +474,17 @@ class Model(object):
         self._setfield(attr, value)
         super(Model, self).__setattr__(attr, value)
 
-    def _setfield(self, attr, value):
+    def _setfield(self, field, value):
         if hasattr(self, "_schema_store"):
-            if attr in self._schema_store["fields"]:
-                nullable = self._schema_store["fields"][attr]["nullable"]
-                blank = self._schema_store["fields"][attr]["blank"]
-                field_type = self._schema_store["fields"][attr]["type"]
+            if field in self._schema_store["fields"]:
+                nullable = self._schema_store["fields"][field]["nullable"]
+                blank = self._schema_store["fields"][field]["blank"]
+                field_type = self._schema_store["fields"][field]["type"]
                 check_type = False
                 value_ = value
                 try:
                     #  TODO: type check and convert value.
-                    if nullable or blank:
+                    if (nullable or blank) and not value:
                         check_type = True
 #                        value_ = value
                     elif field_type == "string":
@@ -500,12 +505,43 @@ class Model(object):
                 except Exception:
                     check_type = False
                 finally:
-                    if check_type is not True and self._strict_field:
+                    if check_type is not True and self._strict_field is True:
                         raise FieldTypeError(
                             "Field Type Error: '{0}' is '{1}' type. ( Input '{2}:{3}' )"
-                                .format(attr, field_type, value_, type(value_).__name__))
+                                .format(field, field_type, value_, type(value_).__name__))
                 # set field
-                self._fields[attr] = value_
+                self._fields[field] = value_
+
+    def _get_field(self, field):
+        if field in self._schema_store["fields"]:
+#            nullable = self._schema_store["fields"][field]["nullable"]
+#            blank = self._schema_store["fields"][field]["blank"]
+            field_type = self._schema_store["fields"][field]["type"]
+            value = self._fields[field]
+            try:
+                if field_type == "string":
+                    return value
+                elif field_type == "integer":
+                    return value
+                elif field_type == "datetime":
+                    return value
+                elif field_type == "related":
+                    return getattr(value, "resource_uri", value)
+                elif field_type == "boolean":
+                    return value
+                else:
+                    return value
+            except Exception:
+                if self._strict_field is True:
+                    raise FieldTypeError(
+                        "Field Type Error: '{0}' is '{1}' type. ( Input '{2}:{3}' )"
+                            .format(field, field_type, value, type(value).__name__))
+
+    def _get_fields(self):
+        fields = {}
+        for field in self._fields:
+            fields.update({field: self._get_field(field)})
+        return fields
 
     def schema(self, *attrs):
         """
@@ -535,9 +571,9 @@ class Model(object):
         :rtype: NoneType
         """
         if hasattr(self, "id"):
-            self._client(self.id).put(self._fields)  # return bool
+            self._client(self.id).put(self._get_fields())  # return bool
         else:
-            self._setattrs(**self._client.post(self._fields))
+            self._setattrs(**self._client.post(self._get_fields()))
 
     def delete(self):
         """ delete

@@ -121,6 +121,8 @@ class ModelTestCase(TestServerTestCase):
             inbox_message.message = message
             inbox_message.inbox = inbox
             inbox_message.save()  # TODO: save success
+
+
         
     def test_save_rel1(self):
         """ relation """
@@ -128,12 +130,13 @@ class ModelTestCase(TestServerTestCase):
     #    body = ""
     #    message = self.client.inbox_message(subject=subject, body=body)
     #    message.save()
-        
-    def test_save_many1(self):
-        """ many to many """
-#    inbox_message_many = self.client.inbox_message_many()
-#    inbox_message_many.inbox_message = inbox_message
-#    inbox_message_many.save()
+#
+#    def test_save_many1(self):
+#        """ many to many """
+#        for inbox_message in self.client.inbox_message.objects.all():
+#            inbox_message_many = self.client.inbox_message_many()
+#            inbox_message_many.inbox_message = inbox_message
+#            inbox_message_many.save()
 
     def test_delete1(self):
         subject = "subject delete 1"

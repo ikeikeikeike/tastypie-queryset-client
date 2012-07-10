@@ -1,7 +1,7 @@
 import os
 
 ADMINS = (
-    ('test@example.com', 'Mr. Test'),
+    ('test@example.com', 'Test User'),
 )
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -30,6 +30,3 @@ DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 CACHE_BACKEND = 'locmem://'
 SECRET_KEY = 'verysecret'
-
-# to make sure timezones are handled correctly in Django>=1.4
-#USE_TZ = True

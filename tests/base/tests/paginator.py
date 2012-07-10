@@ -11,7 +11,7 @@ class PaginatorTestCase(TestServerTestCase):
     def setUp(self):
         self.start_test_server()
         self.client = get_client()
-        call_command('loaddata', 'paginator_data.json')
+        call_command('loaddata', 'base_data.json')
 
     def tearDown(self):
         self.stop_test_server()
@@ -55,16 +55,16 @@ class PaginatorTestCase(TestServerTestCase):
         self.assertTrue(page3.end_index() == 246)
 
         for num, i in enumerate(page1.object_list):
-            print num, i.id
+            print num, i
             pass
         self.assertTrue(num == 99)
 
         for num, i in enumerate(page2.object_list):
-            print num, i.id
+            print num, i
             pass
         self.assertTrue(num == 99)
 
         for num, i in enumerate(page3.object_list):
-            print num, i.id
+            print num, i
             pass
         self.assertTrue(num == 45)
