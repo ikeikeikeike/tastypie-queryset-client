@@ -1,31 +1,17 @@
+from django.core.management import call_command
 from django.core.paginator import Paginator
 from testcases import (
     TestServerTestCase,
     get_client
 )
-from .utils import id_generator
-
+from queryset_client.client import QuerySet
 
 class PaginatorTestCase(TestServerTestCase):
 
     def setUp(self):
         self.start_test_server()
         self.client = get_client()
-        for i in xrange(0, 100):
-            message = self.client.message()
-            message.subject = id_generator()
-            message.body = id_generator()
-            message.save()
-
-            inbox = self.client.inbox()
-            inbox.did = id_generator()
-            inbox.save()
-
-            inbox_message = self.client.inbox_message()
-            inbox_message.message = message.resource_uri
-            inbox_message.inbox = inbox.resource_uri
-            inbox_message.save()
-
+        call_command('loaddata', 'paginator_data.json')
 
     def tearDown(self):
         self.stop_test_server()
@@ -33,22 +19,52 @@ class PaginatorTestCase(TestServerTestCase):
     def test_paginator(self):
         message = self.client.message.objects.all()
 
-        p = Paginator(message,25)
-        self.assertTrue(p.count)
-        self.assertTrue(p.num_pages)
-        self.assertTrue(p.page_range)
+        p = Paginator(message, 100)
+        self.assertTrue(p.count == 246)
+        self.assertTrue(p.num_pages == 3)
+        self.assertTrue(p.page_range == [1, 2, 3])
 
         page1 = p.page(1)
-        self.assertTrue(page1.object_list)
+        self.assertTrue(isinstance(page1.object_list, QuerySet))
+        self.assertTrue(page1.has_next() == True)
+        self.assertTrue(page1.has_previous() == False)
+        self.assertTrue(page1.has_other_pages() == True)
+        self.assertTrue(page1.next_page_number() == 2)
+        self.assertTrue(page1.previous_page_number() == 0)
+        self.assertTrue(page1.start_index() == 1)
+        self.assertTrue(page1.end_index() == 100)
 
         page2 = p.page(2)
-        self.assertTrue(page2.object_list)
-        self.assertTrue(page2.has_next())
-        self.assertTrue(page2.has_previous())
-        self.assertTrue(page2.has_other_pages())
-        self.assertTrue(page2.next_page_number())
-        self.assertTrue(page2.previous_page_number())
-        self.assertTrue(page2.start_index()) # The 1-based index of the first item on this page
-        self.assertTrue(page2.end_index()) # The 1-based index of the last item on this page
-        #print p.page(0)  # TODO:
-        self.assertTrue(p.page(3))
+        self.assertTrue(isinstance(page2.object_list, QuerySet))
+        self.assertTrue(page2.has_next() == True)
+        self.assertTrue(page2.has_previous() == True)
+        self.assertTrue(page2.has_other_pages() == True)
+        self.assertTrue(page2.next_page_number() == 3)
+        self.assertTrue(page2.previous_page_number() == 1)
+        self.assertTrue(page2.start_index() == 101)
+        self.assertTrue(page2.end_index() == 200)
+
+        page3 = p.page(3)
+        self.assertTrue(isinstance(page3.object_list, QuerySet))
+        self.assertTrue(page3.has_next() == False)
+        self.assertTrue(page3.has_previous() == True)
+        self.assertTrue(page3.has_other_pages() == True)
+        self.assertTrue(page3.next_page_number() == 4)
+        self.assertTrue(page3.previous_page_number() == 2)
+        self.assertTrue(page3.start_index() == 201)
+        self.assertTrue(page3.end_index() == 246)
+
+        for num, i in enumerate(page1.object_list):
+            print num, i.id
+            pass
+        self.assertTrue(num == 99)
+
+        for num, i in enumerate(page2.object_list):
+            print num, i.id
+            pass
+        self.assertTrue(num == 99)
+
+        for num, i in enumerate(page3.object_list):
+            print num, i.id
+            pass
+        self.assertTrue(num == 45)
