@@ -54,16 +54,19 @@ class PaginatorTestCase(TestServerTestCase):
         self.assertTrue(page3.start_index() == 201)
         self.assertTrue(page3.end_index() == 246)
 
+        num = 0
         for num, i in enumerate(page1.object_list):
             print num, i
             pass
         self.assertTrue(num == 99)
 
+        num = 0
         for num, i in enumerate(page2.object_list):
             print num, i
             pass
         self.assertTrue(num == 99)
 
+        num = 0
         for num, i in enumerate(page3.object_list):
             print num, i
             pass

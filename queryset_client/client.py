@@ -158,8 +158,8 @@ class QuerySet(object):
                 index = 0
 
     def _clone(self, responses=None, klass=None, **kwargs):
-        klass = klass or self.__class__
         responses = responses or self._responses
+        klass = klass or self.__class__
 
         clone = klass(model=self.model, responses=responses, query=self._query)
         clone.__dict__.update(kwargs)
