@@ -1,18 +1,18 @@
 #from django.conf import settings
 #settings.DEBUG = True
+from django.core.management import call_command
 from testcases import (
     TestServerTestCase,
     get_client
 )
-from .utils import FixtureMixin
 
 
-class ExistsTestCase(FixtureMixin, TestServerTestCase):
+class ExistsTestCase(TestServerTestCase):
 
     def setUp(self):
         self.start_test_server()
         self.client = get_client()
-        super(ExistsTestCase, self).setUp()
+        call_command('loaddata', 'small_data.json')
 
     def tearDown(self):
         self.stop_test_server()

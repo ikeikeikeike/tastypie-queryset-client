@@ -25,6 +25,6 @@ class FixtureMixin(object):
             inbox_message.inbox = inbox
             inbox_message.save()
 
-#            inbox_message_many = self.client.inbox_message_many()
-#            inbox_message_many.inbox_message = inbox_message
-#            inbox_message_many.save()
+            inbox_message_many = self.client.inbox_message_many()
+            inbox_message_many.inbox_message = inbox_message
+            inbox_message_many.save()

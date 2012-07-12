@@ -2,15 +2,15 @@ from testcases import (
     TestServerTestCase,
     get_client
 )
-from .utils import FixtureMixin
+from django.core.management import call_command
 
 
-class LenTestCase(FixtureMixin, TestServerTestCase):
+class LenTestCase(TestServerTestCase):
 
     def setUp(self):
         self.start_test_server()
         self.client = get_client()
-        super(LenTestCase, self).setUp()
+        call_command('loaddata', 'small_data.json')
 
     def tearDown(self):
         self.stop_test_server()

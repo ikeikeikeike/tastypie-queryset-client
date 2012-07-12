@@ -91,5 +91,5 @@ class TestServerTestCase(TransactionTestCase):
             self.server_thread.join()
 
 
-def get_client(url="http://127.0.0.1:8001/base/v1/"):
-    return Client(url)
+def get_client(url="http://127.0.0.1:8001/base/v1/", auth=None, strict_field=True):
+    return Client(url, auth=auth, strict_field=strict_field)

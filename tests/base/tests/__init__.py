@@ -14,3 +14,4 @@ from .model import *
 from .order_by import *
 from .paginator import *
 from .slice import *
+from .strict import *

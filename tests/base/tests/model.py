@@ -34,6 +34,15 @@ class ModelTestCase(TestServerTestCase):
         else:
             self.assertTrue(False)
 
+    def test_type3(self):
+        value = 1
+        try:
+            get_client(strict_field=False).message.subject = value
+        except FieldTypeError:
+            self.assertTrue(False)
+        else:
+            self.assertTrue(True)
+
     def test_call1(self):
         subject = "subject call 1"
         body = "body call 1"
