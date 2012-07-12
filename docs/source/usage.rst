@@ -44,7 +44,7 @@ Exists
 
     >>> client = Client("http://api.server.com/your/v1/")
     >>> client.your.objects.exists()
-    False
+    True
     >>> queryset = client.your.objects.all()
     >>> queryset.exists()
     True
