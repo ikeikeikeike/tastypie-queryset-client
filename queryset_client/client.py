@@ -31,100 +31,6 @@ def parse_id(resouce_uri):
     return resouce_uri.split("/")[::-1][1]
 
 
-class Response(object):
-    """ Proxy Model Class """
-    def __init__(self, model, response=None, **kwargs):
-        """
-
-        :param model: The Model
-        :param response: response from Client Library
-        """
-        response = response or dict()
-        self.__dict__["_response"] = response
-        self.model = model(**response)
-        self._schema = self.model.schema()
-        self._url = ""
-        self._to_many_class = kwargs.get("_to_many_class", ManyToManyManager)
-        self._to_one_class = kwargs.get("_to_one_class", LazyResponse)
-
-    def _get_res(self):
-        return self.__dict__["_response"]
-
-    def _set_res(self, value):
-        self.__dict__["_response"] = value
-
-    def _get_response(self):
-        return self._res
-
-    def _set_response(self, value):
-        self._res = value
-
-    _res = property(_get_res, _set_res)
-    _response = property(_get_response, _set_response)
-
-    def __repr__(self):
-        return "<{0}: {1} {2}>".format(self.model._model_name, self._url, self._res)
-
-    def __getattr__(self, attr):
-        """ return Response Class """
-        if not attr in self._response:
-            raise AttributeError(attr)
-        elif not "related_type" in self._schema["fields"][attr]:
-            return self._response[attr]
-
-        related_type = self._schema["fields"][attr]["related_type"]
-        if related_type == "to_many":
-            return self._to_many_class(model=self.model,
-                            query={"id__in": [parse_id(url) for url in self._response[attr]]})
-        elif related_type == "to_one":
-            return self._to_one_class(model=self.model, model_name=attr, url=self._response[attr])
-
-    def __getitem__(self, item):
-        if item in self._response:
-            return self._response[item]
-        else:
-            raise KeyError(item)
-
-    def __contains__(self, attr):
-        return attr in self._res
-
-    def __setattr__(self, attr, value):
-        if self.__contains__(attr):
-            self._res[attr] = value
-            self.model.__setattr__(attr, value)
-        super(Response, self).__setattr__(attr, value)
-
-    def save(self):
-        """ save saved response """
-        self.model.save()
-
-    def delete(self):
-        """ remove saved response """
-        self.model.delete()
-        self._response = dict()
-
-
-class LazyResponse(Response):
-    """ convert response model and lazy response """
-
-    def __init__(self, model_name, url, *args, **kwargs):
-        super(LazyResponse, self).__init__(*args, **kwargs)
-        self.model = self.model._clone(model_name)
-        self._client = getattr(self.model._main_client, model_name)
-        self._schema = self.model.schema()
-        self._url = url
-
-    def _get_response(self):
-        if not self._res:
-            self._res = self._client(parse_id(self._url)).get()
-        return self._res
-
-    def _set_response(self, value):
-        self._res = value
-
-    _response = property(_get_response, _set_response)
-
-
 class QuerySet(object):
 
     def __init__(self, model, responses=None, query=None, **kwargs):
@@ -148,7 +54,8 @@ class QuerySet(object):
             raise StopIteration()
         index = 0
         length = 0
-        klass = copy.deepcopy(self)
+#        klass = copy.deepcopy(self)
+        klass = self._clone()
         while 1:
             try:
                 yield klass._wrap_response(klass._objects[index])
@@ -428,6 +335,79 @@ class ManyToManyManager(Manager):
         #  TODO: ManyToMany Manager  parent_obj.add(related_object)
         pass
 
+
+class Response(object):
+    """ Proxy Model Class """
+    def __init__(self, model, response=None, model_name=None, url=None, **kwargs):
+        """
+        :param model: The Model
+        :param response: response from Client Library
+        """
+        self.__response = response or dict()
+        self._schema = model.schema()
+        self._to_many_class = kwargs.get("_to_many_class", ManyToManyManager)
+        self._to_one_class = kwargs.get("_to_one_class", self.__class__)
+        if model_name is None:
+            self._response = lambda: self.__response
+            self._url = ""
+            self.model = model(**self.__response)
+        else:
+            self._response = self._lazy_response
+            self._url = url
+            self.model = model._clone(model_name)
+
+    def __repr__(self):
+        return "<{0}: {1} {2}>".format(self.model._model_name, self._url, self.__response)
+
+    def _lazy_response(self):
+        if not self.__response:
+            client = getattr(self.model._main_client, self.model._model_name)
+            self.__response = client(parse_id(self._url)).get()
+            self.model = self.model(**self.__response)
+        return self.__response
+
+    def __getattr__(self, attr):
+        """ return Response Class """
+        if not attr in self._response():
+            raise AttributeError(attr)
+        elif not "related_type" in self._schema["fields"][attr]:
+            return getattr(self.model, attr)
+
+        related_type = self._schema["fields"][attr]["related_type"]
+        if related_type == "to_many":
+            return self._to_many_class(
+                model=self.model, query={"id__in": [parse_id(url) for url in self._response()[attr]]})
+        elif related_type == "to_one":
+            return self._to_one_class(model=self.model, model_name=attr, url=self._response()[attr])
+
+    def __getitem__(self, item):
+        if item in self._response():
+            return getattr(self.model, item)
+        else:
+            raise KeyError(item)
+
+    def __contains__(self, attr):
+        if hasattr(self, "_response") is False:
+            return False
+        return attr in self._response()
+
+    def __setattr__(self, attr, value):
+        if "model" in self.__dict__:
+            if hasattr(self, attr):
+                self.__response[attr] = value
+                setattr(self.model, attr, value)
+        super(Response, self).__setattr__(attr, value)
+
+    def save(self):
+        """ save saved response """
+        self.model.save()
+
+    def delete(self):
+        """ remove saved response """
+        self.model.delete()
+        self.__response = dict()
+
+
 class Model(object):
 
     def __init__(self, main_client, model_name, endpoint, schema, strict_field=True,
@@ -487,14 +467,13 @@ class Model(object):
 
     def __setattr__(self, attr, value):
         self._setfield(attr, value)
-        super(Model, self).__setattr__(attr, value)
 
-    def _setfield(self, field, value):
+    def _setfield(self, attr, value):
         if hasattr(self, "_schema_store"):
-            if field in self._schema_store["fields"]:
-                nullable = self._schema_store["fields"][field]["nullable"]
-                blank = self._schema_store["fields"][field]["blank"]
-                field_type = self._schema_store["fields"][field]["type"]
+            if attr in self._schema_store["fields"]:
+                nullable = self._schema_store["fields"][attr]["nullable"]
+                blank = self._schema_store["fields"][attr]["blank"]
+                field_type = self._schema_store["fields"][attr]["type"]
                 check_type = False
                 err = ""
 
@@ -516,6 +495,8 @@ class Model(object):
                                 except ValueError:
                                     value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
                             check_type = isinstance(value, datetime)
+                        elif field_type == "time":
+                            check_type = True
                         elif field_type == "boolean":
                             check_type = True
                         if field_type == "related":
@@ -526,8 +507,9 @@ class Model(object):
                         if check_type is not True:
                             raise FieldTypeError(
                                 "'{0}' is '{1}' type. ( Input '{2}:{3}' ) {4}"
-                                    .format(field, field_type, value, type(value).__name__, err))
-                self._fields[field] = value  # set field
+                                    .format(attr, field_type, value, type(value).__name__, err))
+                self._fields[attr] = value  # set field
+        super(Model, self).__setattr__(attr, value)
 
     def _get_field(self, field):
         if field in self._schema_store["fields"]:
@@ -541,6 +523,8 @@ class Model(object):
                         pass  #  input safe
                     elif field_type == "datetime":
                         value = value.isoformat()
+                    elif field_type == "time":
+                        pass
                     elif field_type == "boolean":
                         pass
                     else:
