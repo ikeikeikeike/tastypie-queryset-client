@@ -18,17 +18,19 @@ class ModelTestCase(TestServerTestCase):
 
     def tearDown(self):
         self.stop_test_server()
-    
+
     def test_type1(self):
         value = 1
-        self.client.message.id = value
-        self.assertTrue(self.client.message.id == value)
-        self.assertTrue(self.client.message._fields["id"] == value)
+        message = self.client.message()
+        message.id = value
+        self.assertTrue(message.id == value)
+        self.assertTrue(message._fields["id"] == value)
 
     def test_type2(self):
         value = 1
+        message = self.client.message()
         try:
-            self.client.message.subject = value
+            message.subject = value
         except FieldTypeError:
             self.assertTrue(True)
         else:
@@ -36,8 +38,9 @@ class ModelTestCase(TestServerTestCase):
 
     def test_type3(self):
         value = 1
+        message = get_client(strict_field=False).message()
         try:
-            get_client(strict_field=False).message.subject = value
+            message.subject = value
         except FieldTypeError:
             self.assertTrue(False)
         else:
@@ -105,19 +108,21 @@ class ModelTestCase(TestServerTestCase):
         subject = id_generator()
         body = id_generator()
 
-        for message in self.client.message.objects.filter(id__in=xrange(20, 33)):
+        fil = self.client.message.objects.filter(id__in=range(20, 33))
+
+        for message in fil:
             message.subject = subject
             message.body = body
             message.save()
 
-        for message in self.client.message.objects.filter(id__in=xrange(20, 33)):
+        for message in self.client.message.objects.filter(id__in=range(20, 33)):
             self.assertTrue(message.subject == subject)
             self.assertTrue(message.body == body)
 
     def test_object_save1(self):
         """ object save
         """
-        for i in xrange(0, 12):
+        for i in range(0, 12):
             message = self.client.message()
             message.subject = id_generator()
             message.body = id_generator()
@@ -158,12 +163,12 @@ class ModelTestCase(TestServerTestCase):
         body = "body delete 1"
         message = self.client.message(subject=subject, body=body)
         message.save()
-    
+
         message_ = self.client.message.objects.get(id=message.id, subject=subject, body=body)
         self.assertTrue(message_.id == message.id)
         self.assertTrue(message_.subject == message.subject)
         self.assertTrue(message_.body == message.body)
-    
+
         message.delete()
         try:
             message.id
@@ -171,7 +176,7 @@ class ModelTestCase(TestServerTestCase):
             self.assertTrue(True)
         else:
             self.assertTrue(False)
-    
+
         try:
             message_.delete()
         except Exception:

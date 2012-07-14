@@ -18,5 +18,6 @@ class LazyTestCase(TestServerTestCase):
     def test_lazy1(self):
         fl = self.client.inbox_message_many.objects.filter()
         self.assertTrue(fl)
-        for f in fl:
+        for i, f in enumerate(fl):
             self.assertTrue(f)
+        self.assertTrue(fl.count() == i+1)

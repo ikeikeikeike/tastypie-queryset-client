@@ -1,5 +1,5 @@
-#from django.conf import settings
-#settings.DEBUG = True
+from django.conf import settings
+settings.DEBUG = True
 from testcases import (
     TestServerTestCase,
     get_client
@@ -22,7 +22,6 @@ class CountTestCase(FixtureMixin, TestServerTestCase):
         self.assertTrue(-1 < num)
         self.assertTrue(isinstance(num, int))
 
-    def test_count2(self):
         nums = self.client.message.objects.filter(id__in=xrange(0, 12))
         num = nums.count()
         assert 11 == num

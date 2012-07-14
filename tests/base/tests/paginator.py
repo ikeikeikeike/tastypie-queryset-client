@@ -16,7 +16,7 @@ class PaginatorTestCase(TestServerTestCase):
     def tearDown(self):
         self.stop_test_server()
 
-    def test_paginator(self):
+    def test_paginator1(self):
         message = self.client.message.objects.all()
 
         p = Paginator(message, 100)
@@ -59,15 +59,46 @@ class PaginatorTestCase(TestServerTestCase):
             print num, i
             pass
         self.assertTrue(num == 99)
+        self.assertTrue(i.id == 101)
 
         num = 0
         for num, i in enumerate(page2.object_list):
             print num, i
             pass
         self.assertTrue(num == 99)
+        self.assertTrue(i.id == 201)
 
         num = 0
         for num, i in enumerate(page3.object_list):
             print num, i
             pass
         self.assertTrue(num == 45)
+        self.assertTrue(i.id == 247)
+
+        #
+        message = self.client.message.objects.all()
+        p = Paginator(message, 100)
+        page1 = p.page(1)
+        page2 = p.page(2)
+        page3 = p.page(3)
+
+        num = 0
+        for num, i in enumerate(page1):
+            print num, i
+            pass
+        self.assertTrue(num == 99)
+        self.assertTrue(i.id == 101)
+
+        num = 0
+        for num, i in enumerate(page2):
+            print num, i
+            pass
+        self.assertTrue(num == 99)
+        self.assertTrue(i.id == 201)
+
+        num = 0
+        for num, i in enumerate(page3):
+            print num, i
+            pass
+        self.assertTrue(num == 45)
+        self.assertTrue(i.id == 247)

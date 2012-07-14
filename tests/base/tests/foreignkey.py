@@ -20,9 +20,15 @@ class ForeignkeyTestCase(TestServerTestCase):
     # TODO: input prepend data
     def test_foreignkey1(self):
         if 0 < self.client.inbox_message.objects.count():
-            self.assertTrue(self.client.inbox_message.objects.all()[0].message.id)
-            self.assertTrue(self.client.inbox_message.objects.all()[1].message.id)
-            self.assertTrue(self.client.inbox_message.objects.all()[2].message.id)
+            try:
+                a = self.client.inbox_message.objects.all()[0]
+                b = a.message.id
+
+                self.assertTrue(self.client.inbox_message.objects.all()[0].message.id)
+                self.assertTrue(self.client.inbox_message.objects.all()[1].message.id)
+                self.assertTrue(self.client.inbox_message.objects.all()[2].message.id)
+            except Exception, err:
+                print err
 
         try:
             self.client.inbox_message.objects.all()[99999]

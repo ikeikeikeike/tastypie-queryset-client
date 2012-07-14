@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
 import copy
-import urlparse
 import slumber
-
+import urlparse
 
 
 __all__ = ["Client"]
@@ -21,16 +20,6 @@ class FieldTypeError(TypeError):
     pass
 
 
-def parse_id(resouce_uri):
-    """ url parsing
-
-    :param resource_uri:
-    :rtype: str
-    :return: primary id
-    """
-    return resouce_uri.split("/")[::-1][1]
-
-
 class QuerySet(object):
 
     def __init__(self, model, responses=None, query=None, **kwargs):
@@ -38,34 +27,51 @@ class QuerySet(object):
         self._kwargs = kwargs
         self._query = query or dict()
         self._iteration_num = None
-        self._set_objects(responses)  # set _responses, _meta, _objects, _objects_count
         self._response_class = kwargs.get("response_class", Response)
+        self._set_objects(responses)  # set _responses, _meta, _objects, _objects_count
 
     def __repr__(self):
         return "<QuerySet {0} ({1}/{2})>".format(
-                    self._response_class, self._objects_count, len(self))
+                    self._response_class, len(self._objects), len(self))
 
     def __len__(self):
         """ total count """
         return self.count()
 
     def __iter__(self):
+#        l = len(self._objects); a = len(self)
+
+        if len(self._objects) < 1\
+        or len(self._objects) < len(self):
+            return self._iteration()
+        return iter(self._objects)
+
+    def _iteration(self):
         if len(self) < 1:
             raise StopIteration()
-        index = 0
-        length = 0
-#        klass = copy.deepcopy(self)
-        klass = self._clone()
+        index, length = 0, 0
+        klass = self._clone(self._responses)  #  klass = copy.deepcopy(self)
         while 1:
             try:
-                yield klass._wrap_response(klass._objects[index])
+                yield klass._objects[index]
                 index += 1
                 length += 1
-            except KeyError:
-                if self._iteration_num <= length and self._iteration_num is not None:
+            except IndexError:
+                if self._iteration_num <= length \
+                and self._iteration_num is not None:
                     raise StopIteration()
                 klass = klass._next()
+                self._objects.extend(klass._objects)
                 index = 0
+
+    def _fill_objects(self):
+        self._set_objects(self._get_responses())
+
+    def _set_objects(self, responses):
+        self._responses = responses
+        self._meta = responses and responses["meta"]
+        self._objects = \
+            [self._wrap_response(o) for o in responses["objects"]] if responses else []
 
     def _clone(self, responses=None, klass=None, **kwargs):
         responses = responses or self._responses
@@ -108,18 +114,9 @@ class QuerySet(object):
 
             if not self._responses:
                 self._fill_objects()
-            return self._wrap_response(self._objects[index])
+            return self._objects[index]
         except KeyError as err:
             raise IndexError(err)
-
-    def _fill_objects(self):
-        self._set_objects(self._get_responses())
-
-    def _set_objects(self, responses):
-        self._responses = responses
-        self._meta = responses and responses["meta"]
-        self._objects = dict(enumerate(responses["objects"])) if responses else []
-        self._objects_count = len(self._objects)
 
     def _get_responses(self, **kwargs):
         return self.model._client.get(**kwargs)
@@ -200,25 +197,19 @@ class QuerySet(object):
         return self._filter(*args, **kwargs)
 
     def _get_ids(self):
-        return [parse_id(self._objects[i]["resource_uri"]) for i in self._objects]
+        return [parse_id(obj["resource_uri"]) for obj in self._objects]
 
     def _filter(self, *args, **kwargs):
-
         # TODO: ↓↓↓ ManyToManyで 一件も relationがない場合の処理, 現状元のQuerySetの結果が返される ↓↓↓↓
         # <QuerySet <class 'queryset_client.client.Response'> (0/0)>
-
         # TODO: id__in 上書きされる
-
         query = dict(self._query.items() + kwargs.items())
         clone = self._clone(self._get_responses(**query))
         clone._query.update({"id__in": clone._get_ids()})
-
         return clone
 
     def order_by(self, *args, **kwargs):
-
         # TODO: multiple order_by = "order_by=-body&order_by=id"
-
         order = {"order_by": args[0]}
         clone = self._filter(*args, **dict(order.items() + kwargs.items()))
         clone._query.update(order)
@@ -335,10 +326,25 @@ class ManyToManyManager(Manager):
         #  TODO: ManyToMany Manager  parent_obj.add(related_object)
         pass
 
+    def filter(self, *args, **kwargs):
+        if "id__in" in kwargs:
+            raise NotImplementedError("'id__in' does not allow ManyToManyManager.")
+        return super(ManyToManyManager, self).filter(*args, **kwargs)
+
+
+def parse_id(resouce_uri):
+    """ url parsing
+
+    :param resource_uri:
+    :rtype: str
+    :return: primary id
+    """
+    return resouce_uri.split("/")[::-1][1]
+
 
 class Response(object):
     """ Proxy Model Class """
-    def __init__(self, model, response=None, model_name=None, url=None, **kwargs):
+    def __init__(self, model, response=None, url=None, **kwargs):
         """
         :param model: The Model
         :param response: response from Client Library
@@ -347,14 +353,14 @@ class Response(object):
         self._schema = model.schema()
         self._to_many_class = kwargs.get("_to_many_class", ManyToManyManager)
         self._to_one_class = kwargs.get("_to_one_class", self.__class__)
-        if model_name is None:
+        if url is None:
             self._response = lambda: self.__response
             self._url = ""
             self.model = model(**self.__response)
         else:
             self._response = self._lazy_response
             self._url = url
-            self.model = model._clone(model_name)
+            self.model = model
 
     def __repr__(self):
         return "<{0}: {1} {2}>".format(self.model._model_name, self._url, self.__response)
@@ -371,14 +377,14 @@ class Response(object):
         if not attr in self._response():
             raise AttributeError(attr)
         elif not "related_type" in self._schema["fields"][attr]:
-            return getattr(self.model, attr)
+            return self.__getitem__(attr)
 
         related_type = self._schema["fields"][attr]["related_type"]
         if related_type == "to_many":
-            return self._to_many_class(
-                model=self.model, query={"id__in": [parse_id(url) for url in self._response()[attr]]})
+            return self._to_many_class(model=self.model.clone(attr),
+                    query={"id__in": [parse_id(url) for url in self._response()[attr]]})
         elif related_type == "to_one":
-            return self._to_one_class(model=self.model, model_name=attr, url=self._response()[attr])
+            return self._to_one_class(model=self.model.clone(attr), url=self._response()[attr])
 
     def __getitem__(self, item):
         if item in self._response():
@@ -408,187 +414,185 @@ class Response(object):
         self.__response = dict()
 
 
-class Model(object):
+def model_gen(**configs):
+    """ generate """
 
-    def __init__(self, main_client, model_name, endpoint, schema, strict_field=True,
-                 objects=None, base_client=None):
-        """
-        :param slumber main_client:
-        :param str model_name: resource name
-        :param str endpoint: endpoint url
-        :param str schema: schema url
-        :param bool strict_field: strict field and convert value in field. ( default: True )
-        :param Manager objects: Manager Class
-        :param Client objects: Client Class
-        """
-        self._client = getattr(main_client, model_name)
-        self._main_client = main_client
-        self._base_client = base_client
-        self._model_name = model_name
-        self._endpoint = endpoint
-        self._schema = schema
-        self._strict_field = strict_field
-        self._schema_store = self._base_client.schema(model_name)
-        self._base_url = self._main_client._store["base_url"]
-        self._fields = dict()  # TODO: set field attribute
-        self.objects = objects or Manager(self)  # TODO: LazyCall
+    class Model(object):
 
-    def __repr__(self):
-        return "<{0}: {1}{2}>".format(self._model_name, self._endpoint,
-                                      " " + str(self._fields) if self._fields else "")
+        _client = getattr(configs.get("main_client"), configs.get("model_name"))
+        _main_client = configs.get("main_client")
+        _base_client = configs.get("base_client")
+        _model_name = configs.get("model_name")
+        _endpoint = configs.get("endpoint")
+        _schema = configs.get("schema")
+        _strict_field = configs.get("strict_field", True)
+        _schema_store = _base_client.schema(_model_name)
+        _base_url = _main_client._store["base_url"]
+        _fields = dict()  # TODO: set field attribute
+        objects = None
 
-    def __call__(self, **kwargs):
-        self._setattrs(**kwargs)  # TODO: LazyCall
+        def __init__(self, **kwargs):
+            """
+            :param slumber main_client:
+            :param str model_name: resource name
+            :param str endpoint: endpoint url
+            :param str schema: schema url
+            :param bool strict_field: strict field and convert value in field. ( default: True )
+            :param Manager objects: Manager Class
+            :param Client objects: Client Class
+            """
+            self._clear_fields()
+            self._setattrs(**kwargs)  # TODO: LazyCall
 
-        klass = copy.deepcopy(self)
-        self._clear_fields()
-        self._fields = dict()
-        return klass
+        def __repr__(self):
+            return "<{0}: {1}{2}>".format(self._model_name, self._endpoint,
+                                          " " + str(self._fields) if self._fields else "")
 
-    def _clear_fields(self, klass=None):
-        c = klass or self
-        for field in c._fields:
-            c.__delattr__(field)
+        def _clear_fields(self, klass=None):
+            c = klass or self
+            for field in c._fields:
+                c.__delattr__(field)
+            c._fields = dict()
 
-    def _clone(self, model_name, **kwargs):
-        """ create `model_name` model """
-        s = self._base_client.schema()[model_name]
-        klass = self.__class__(self._main_client, model_name, s["list_endpoint"], s["schema"],
-                               self._strict_field, base_client=self._base_client)
-        klass.__dict__.update(kwargs)
-        return klass
+        def _setattrs(self, **kwargs):
+            for field in kwargs:
+                self.__setattr__(field, kwargs[field])
+                if not field in self._fields:
+                    raise FieldTypeError("'{0}' is an invalid keyword argument for this function"
+                                         .format(field))
 
-    def _setattrs(self, **kwargs):
-        for field in kwargs:
-            self.__setattr__(field, kwargs[field])
-            if not field in self._fields:
-                raise FieldTypeError("'{0}' is an invalid keyword argument for this function"
-                                     .format(field))
+        def __setattr__(self, attr, value):
+            self._setfield(attr, value)
 
-    def __setattr__(self, attr, value):
-        self._setfield(attr, value)
+        def _setfield(self, attr, value):
+            if hasattr(self, "_schema_store"):
+                if attr in self._schema_store["fields"]:
+                    nullable = self._schema_store["fields"][attr]["nullable"]
+                    blank = self._schema_store["fields"][attr]["blank"]
+                    field_type = self._schema_store["fields"][attr]["type"]
+                    check_type = False
+                    err = ""
+                    if self._strict_field is True:
+                        try:
+                            if (nullable or blank) and not value:
+                                check_type = True
+                            elif field_type == "string":
+                                check_type = isinstance(value, (str, unicode))
+                            elif field_type == "integer":
+                                if isinstance(value, (str, unicode)):
+                                    check_type = value.isdigit()
+                                elif isinstance(value, int):
+                                    check_type = True
+                            elif field_type == "datetime":
+                                if isinstance(value, (str, unicode)):
+                                    try:
+                                        value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+                                    except ValueError:
+                                        value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
+                                check_type = isinstance(value, datetime)
+                            elif field_type == "time":
+                                check_type = True
+                            elif field_type == "boolean":
+                                check_type = True
+                            if field_type == "related":
+                                check_type = True
+                        except Exception, err:
+                            check_type = False
+                        finally:
+                            if check_type is not True:
+                                raise FieldTypeError(
+                                    "'{0}' is '{1}' type. ( Input '{2}:{3}' ) {4}"
+                                        .format(attr, field_type, value, type(value).__name__, err))
+                    self._fields[attr] = value  # set field
+            super(Model, self).__setattr__(attr, value)
 
-    def _setfield(self, attr, value):
-        if hasattr(self, "_schema_store"):
-            if attr in self._schema_store["fields"]:
-                nullable = self._schema_store["fields"][attr]["nullable"]
-                blank = self._schema_store["fields"][attr]["blank"]
-                field_type = self._schema_store["fields"][attr]["type"]
-                check_type = False
-                err = ""
+        def _get_field(self, field):
+            if field in self._schema_store["fields"]:
+                field_type = self._schema_store["fields"][field]["type"]
+                value = self._fields[field]
                 if self._strict_field is True:
                     try:
-                        if (nullable or blank) and not value:
-                            check_type = True
-                        elif field_type == "string":
-                            check_type = isinstance(value, (str, unicode))
+                        if field_type == "string":
+                            pass
                         elif field_type == "integer":
-                            if isinstance(value, (str, unicode)):
-                                check_type = value.isdigit()
-                            elif isinstance(value, int):
-                                check_type = True
+                            pass  #  input safe
                         elif field_type == "datetime":
-                            if isinstance(value, (str, unicode)):
-                                try:
-                                    value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
-                                except ValueError:
-                                    value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
-                            check_type = isinstance(value, datetime)
+                            value = value.isoformat()
                         elif field_type == "time":
-                            check_type = True
+                            pass
                         elif field_type == "boolean":
-                            check_type = True
-                        if field_type == "related":
-                            check_type = True
-                    except Exception, err:
-                        check_type = False
-                    finally:
-                        if check_type is not True:
+                            pass
+                        else:
+                            pass
+                    except Exception:
+                        if self._strict_field is True:
                             raise FieldTypeError(
-                                "'{0}' is '{1}' type. ( Input '{2}:{3}' ) {4}"
-                                    .format(attr, field_type, value, type(value).__name__, err))
-                self._fields[attr] = value  # set field
-        super(Model, self).__setattr__(attr, value)
+                                "'{0}' is '{1}' type. ( Input '{2}:{3}' )"
+                                    .format(field, field_type, value, type(value).__name__))
+                 #  TODO: ManyToMany Manager  parent_obj.add(related_object)
+                if field_type == "related":
+                    value = getattr(value, "resource_uri", value)
+                    if self._schema_store["fields"][field]["related_type"] == "to_many":
+                        if isinstance(value, (list, tuple)) is False:
+                            value = [value]
+                return value
 
-    def _get_field(self, field):
-        if field in self._schema_store["fields"]:
-            field_type = self._schema_store["fields"][field]["type"]
-            value = self._fields[field]
-            if self._strict_field is True:
-                try:
-                    if field_type == "string":
-                        pass
-                    elif field_type == "integer":
-                        pass  #  input safe
-                    elif field_type == "datetime":
-                        value = value.isoformat()
-                    elif field_type == "time":
-                        pass
-                    elif field_type == "boolean":
-                        pass
-                    else:
-                        pass
-                except Exception:
-                    if self._strict_field is True:
-                        raise FieldTypeError(
-                            "'{0}' is '{1}' type. ( Input '{2}:{3}' )"
-                                .format(field, field_type, value, type(value).__name__))
-             #  TODO: ManyToMany Manager  parent_obj.add(related_object)
-            if field_type == "related":
-                value = getattr(value, "resource_uri", value)
-                if self._schema_store["fields"][field]["related_type"] == "to_many":
-                    if isinstance(value, (list, tuple)) is False:
-                        value = [value]
-            return value
+        def _get_fields(self):
+            fields = {}
+            for field in self._fields:
+                fields.update({field: self._get_field(field)})
+            return fields
 
-    def _get_fields(self):
-        fields = {}
-        for field in self._fields:
-            fields.update({field: self._get_field(field)})
-        return fields
+        @classmethod
+        def clone(cls, model_name=None):
+            """ create `model_name` model """
+            return cls._base_client._model_gen(model_name or cls._model_name)
 
-    def schema(self, *attrs):
-        """
+        @classmethod
+        def schema(cls, *attrs):
+            """
 
-        * attrs example ::
+            * attrs example ::
 
-                >>> self.schema("fields")
-                # out fields schema
-                >>> self.schema("fields", "id")
-                # out id schema
+                    >>> self.schema("fields")
+                    # out fields schema
+                    >>> self.schema("fields", "id")
+                    # out id schema
 
-        :param tuple attrs:
-        :rtype: dict
-        :return: model schema
-        """
-        if attrs:
-            s = self._schema_store
-            for attr in attrs:
-                s = s[attr]
-            return s
-        else:
-            return self._schema_store
+            :param tuple attrs:
+            :rtype: dict
+            :return: model schema
+            """
+            if attrs:
+                s = cls._schema_store
+                for attr in attrs:
+                    s = s[attr]
+                return s
+            else:
+                return cls._schema_store
 
-    def save(self):
-        """ save
+        def save(self):
+            """ save
 
-        :rtype: NoneType
-        """
-        if hasattr(self, "id"):
-            self._client(self.id).put(self._get_fields())  # return bool
-        else:
-            self._setattrs(**self._client.post(self._get_fields()))
+            :rtype: NoneType
+            """
+            if hasattr(self, "id"):
+                self._client(self.id).put(self._get_fields())  # return bool
+            else:
+                self._setattrs(**self._client.post(self._get_fields()))
 
-    def delete(self):
-        """ delete
+        def delete(self):
+            """ delete
 
-        :rtype: NoneType
-        """
-        assert hasattr(self, "id") is True, "{0} object can't be deleted because its {2} attribute \
-            is set to None.".format(self._model_name, self._schema_store["fields"]["id"]["type"])
-        self._client(self.id).delete()
-        self._clear_fields()
+            :rtype: NoneType
+            """
+            assert hasattr(self, "id") is True, "{0} object can't be deleted because its {2} attribute \
+                is set to None.".format(self._model_name, self._schema_store["fields"]["id"]["type"])
+            self._client(self.id).delete()
+            self._clear_fields()
 
+    Model.objects = configs.get("objects", Manager(Model))
+    return Model
 
 class SchemaStore(dict):
     """ schema cache """
@@ -627,7 +631,7 @@ class Client(object):
         """
         self._main_client = (client or slumber.API)(base_url, auth)
         self._base_url = self._main_client._store["base_url"]
-        self._method_gen(strict_field=strict_field)
+        self._methods_gen(strict_field)
 
     def request(self, url, method="GET"):
         """ base requester
@@ -673,10 +677,13 @@ class Client(object):
         else:
             return url
 
-    def _method_gen(self, strict_field, base_client=None):
-        base_client = base_client or copy.deepcopy(self)
-        s = self.schema()
-        for model_name in s:
-            setattr(self, model_name, Model(self._main_client, model_name,
-                    s[model_name]["list_endpoint"], s[model_name]["schema"],
-                    strict_field=strict_field, base_client=base_client))
+    def _methods_gen(self, strict_field=True):
+        for model_name in self.schema():
+            setattr(self, model_name, self._model_gen(model_name, strict_field))
+
+    def _model_gen(self, model_name, strict_field=True, base_client=None):
+        schema = self.schema()
+        return model_gen(
+            main_client=self._main_client, model_name=model_name,
+            endpoint=schema[model_name]["list_endpoint"], schema=schema[model_name]["schema"],
+            strict_field=strict_field, base_client=base_client or copy.deepcopy(self))

@@ -2,6 +2,7 @@ from testcases import (
     TestServerTestCase,
     get_client
 )
+from django.core.management import call_command
 
 
 class OrderByTestCase(TestServerTestCase):
@@ -9,6 +10,7 @@ class OrderByTestCase(TestServerTestCase):
     def setUp(self):
         self.start_test_server()
         self.client = get_client()
+        call_command('loaddata', 'small_data.json')
 
     def tearDown(self):
         self.stop_test_server()
@@ -17,17 +19,14 @@ class OrderByTestCase(TestServerTestCase):
         for i in self.client.message.objects.order_by("-id")[0:30]:
             self.assertTrue(i)
 
-    def test_order2(self):
-        order =  self.client.message.objects.all().order_by("-id")[0:30]
-        for i in order:
+        order1 =  self.client.message.objects.all().order_by("-id")[0:30]
+        for i in order1:
             self.assertTrue(i)
 
-    def test_order3(self):
-        order =  self.client.message.objects.all().order_by("-id")
-        for i, k in zip(order.all(), order):
+        order2 =  self.client.message.objects.all().order_by("-id")
+        for i, k in zip(order2.all(), order2):
             self.assertTrue(i.id == k.id)
 
-    def test_order4(self):
-        order =  self.client.message.objects.order_by("-id")
-        for i, k in zip(order.all(), order):
+        order3 =  self.client.message.objects.order_by("-id")
+        for i, k in zip(order3.all(), order3):
             self.assertTrue(i.id == k.id)
