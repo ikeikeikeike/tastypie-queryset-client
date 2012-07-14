@@ -371,41 +371,33 @@ class Response(object):
         self._schema = model.schema()
         self._to_many_class = kwargs.get("_to_many_class", ManyToManyManager)
         self._to_one_class = kwargs.get("_to_one_class", self.__class__)
+        self._url = url
         if url is None:
-            self._response = lambda: self.__response
-            self._url = ""
             self.model = model(**self.__response)
         else:
-            self._response = self._lazy_response
-            self._url = url
             self.model = model
 
     def __repr__(self):
-        return "<{0}: {1} {2}>".format(self.model._model_name, self._url, self.__response)
-
-    def _lazy_response(self):
-        if not self.__response:
-            client = getattr(self.model._main_client, self.model._model_name)
-            self.__response = client(parse_id(self._url)).get()
-            self.model = self.model(**self.__response)
-        return self.__response
+        return "<{0}: {1} {2}>".format(
+            self.model._model_name, self._url or "", self.__response)
 
     def __getattr__(self, attr):
         """ return Response Class """
-        if not attr in self._response():
+        if not attr in self._response:
             raise AttributeError(attr)
         elif not "related_type" in self._schema["fields"][attr]:
             return self.__getitem__(attr)
 
         related_type = self._schema["fields"][attr]["related_type"]
+        model = self.model.clone(attr)
+        url = self._response[attr]
         if related_type == "to_many":
-            return self._to_many_class(model=self.model.clone(attr),
-                    query={"id__in": [parse_id(url) for url in self._response()[attr]]})
+            return self._to_many_class(model=model, query={"id__in": [parse_id(u) for u in url]})
         elif related_type == "to_one":
-            return self._to_one_class(model=self.model.clone(attr), url=self._response()[attr])
+            return self._to_one_class(model=model, url=url)
 
     def __getitem__(self, item):
-        if item in self._response():
+        if item in self._response:
             return getattr(self.model, item)
         else:
             raise KeyError(item)
@@ -413,7 +405,7 @@ class Response(object):
     def __contains__(self, attr):
         if hasattr(self, "_response") is False:
             return False
-        return attr in self._response()
+        return attr in self._response
 
     def __setattr__(self, attr, value):
         if "model" in self.__dict__:
@@ -421,6 +413,15 @@ class Response(object):
                 self.__response[attr] = value
                 setattr(self.model, attr, value)
         super(Response, self).__setattr__(attr, value)
+
+    @property
+    def _response(self):
+        if "model" in self.__dict__:
+            if not self.__response:
+                client = getattr(self.model._main_client, self.model._model_name)
+                self.__response = client(parse_id(self._url)).get()
+                self.model = self.model(**self.__response)
+        return self.__response
 
     def save(self):
         """ save saved response """
@@ -433,10 +434,19 @@ class Response(object):
 
 
 def model_gen(**configs):
-    """ generate """
+    """ generate model
 
+    :param slumber main_client:
+    :param str model_name: resource name
+    :param str endpoint: endpoint url
+    :param str schema: schema url
+    :param bool strict_field: strict field and convert value in field. ( default: True )
+    :param Manager objects: Manager Class
+    :param Client objects: Client Class
+    """
     class Model(object):
-
+        """ Inner Class
+        """
         _client = getattr(configs.get("main_client"), configs.get("model_name"))
         _main_client = configs.get("main_client")
         _base_client = configs.get("base_client")
@@ -450,15 +460,6 @@ def model_gen(**configs):
         objects = None
 
         def __init__(self, **kwargs):
-            """
-            :param slumber main_client:
-            :param str model_name: resource name
-            :param str endpoint: endpoint url
-            :param str schema: schema url
-            :param bool strict_field: strict field and convert value in field. ( default: True )
-            :param Manager objects: Manager Class
-            :param Client objects: Client Class
-            """
             self._clear_fields()
             self._setattrs(**kwargs)  # TODO: LazyCall
 
@@ -611,6 +612,7 @@ def model_gen(**configs):
 
     Model.objects = configs.get("objects", Manager(Model))
     return Model
+
 
 class SchemaStore(dict):
     """ schema cache """
