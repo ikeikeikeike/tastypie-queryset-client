@@ -476,7 +476,6 @@ class Model(object):
                 field_type = self._schema_store["fields"][attr]["type"]
                 check_type = False
                 err = ""
-
                 if self._strict_field is True:
                     try:
                         if (nullable or blank) and not value:
