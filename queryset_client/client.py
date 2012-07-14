@@ -31,16 +31,20 @@ class QuerySet(object):
         self._set_objects(responses)  # set _responses, _meta, _objects, _objects_count
 
     def __repr__(self):
+        if self.__objects is None:
+            numerator = 0
+        else:
+            numerator = len(self._objects)
         return "<QuerySet {0} ({1}/{2})>".format(
-                    self._response_class, len(self._objects), len(self))
+                    self._response_class, numerator, len(self))
 
     def __len__(self):
         """ total count """
-        return self.count()
+        if self._iteration_num is None:
+            return self.count()
+        return self._iteration_num
 
     def __iter__(self):
-#        l = len(self._objects); a = len(self)
-
         if len(self._objects) < 1\
         or len(self._objects) < len(self):
             return self._iteration()
@@ -64,14 +68,28 @@ class QuerySet(object):
                 self._objects.extend(klass._objects)
                 index = 0
 
+    def __get_objects(self):
+        if self.__objects is not None \
+        and isinstance(self.__objects, (tuple, list)):
+            for i, obj in enumerate(self.__objects):
+                if isinstance(obj, dict) is True:
+                    self.__objects[i] = self._wrap_response(obj)
+            return self.__objects
+        else:
+            return []
+
+    def __set_objects(self, value):
+        self.__objects = value
+
+    _objects = property(__get_objects, __set_objects)
+
     def _fill_objects(self):
         self._set_objects(self._get_responses())
 
     def _set_objects(self, responses):
         self._responses = responses
         self._meta = responses and responses["meta"]
-        self._objects = \
-            [self._wrap_response(o) for o in responses["objects"]] if responses else []
+        self._objects = responses and responses["objects"]
 
     def _clone(self, responses=None, klass=None, **kwargs):
         responses = responses or self._responses
