@@ -15,6 +15,7 @@ Contents:
    model
    manager
    usage
+   HISTORY
 
 
 Indices and tables
