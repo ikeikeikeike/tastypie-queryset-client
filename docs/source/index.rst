@@ -11,12 +11,23 @@ Contents:
 .. toctree::
    :maxdepth: 5
 
+   usage
+
+Class:
+
+.. toctree::
+   :maxdepth: 5
+
    client
    model
    manager
-   usage
-   HISTORY
 
+Change History:
+
+.. toctree::
+   :maxdepth: 5
+
+   HISTORY
 
 Indices and tables
 ==================
