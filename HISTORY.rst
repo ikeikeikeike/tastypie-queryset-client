@@ -1,7 +1,7 @@
 History
 --------
 
-0.6.x (2012-0x-xx)
+0.6.4 (2012-08-14)
 ~~~~~~~~~~~~~~~~~~~
 * Support issue `#29 <https://github.com/ikeikeikeike/tastypie-queryset-client/issues/29>`_
 * Add clear method in the ManyToManyManager.

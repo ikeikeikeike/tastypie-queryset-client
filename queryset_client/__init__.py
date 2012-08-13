@@ -1,6 +1,6 @@
 from client import Client
 
-VERSION = (0, 6, 3, 'final', 1)
+VERSION = (0, 6, 4, 'final', 1)
 
 
 def get_version(version=None):
