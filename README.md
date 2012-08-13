@@ -57,6 +57,10 @@ Delete
 >>>     assert True  # throw AttributeError.
 ```
 
+Requirements
+=============
+
+Tastypie: [Over the 0.9.12-alpha](https://github.com/toastdriven/django-tastypie/commit/daca57ad5f62afcf1ffacaaf77bc3715a1b9a04f).
 
 Setup
 =====

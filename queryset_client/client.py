@@ -218,9 +218,19 @@ class QuerySet(object):
         return [parse_id(obj["resource_uri"]) for obj in self._objects]
 
     def _filter(self, *args, **kwargs):
-        # TODO: ↓↓↓ ManyToManyで 一件も relationがない場合の処理, 現状元のQuerySetの結果が返される ↓↓↓↓
-        # <QuerySet <class 'queryset_client.client.Response'> (0/0)>
-        # TODO: id__in 上書きされる
+        """
+
+        .. note:: No request args(Empty request params).
+
+            - × e.p. id__in=[] -> http://no.com/?any=search
+            - ○ e.p. id__in=[] -> http://no.com/?any=search&id__in=
+
+
+        .. note:: overwrite, id__in
+
+        """
+
+        # TODO: Bugs? in the requests package. (The Issue #??).
         query = dict(self._query.items() + kwargs.items())
         clone = self._clone(self._get_responses(**query))
         clone._query.update({"id__in": clone._get_ids()})
@@ -333,31 +343,83 @@ class Manager(object):
 
 class ManyToManyManager(Manager):
 
-    def __init__(self, query, **kwargs):
+    def __init__(self, query=None, instance=None, **kwargs):
         super(ManyToManyManager, self).__init__(**kwargs)
-        self._query = query
+        self._query = query or dict()
+        self._instance = instance
 
     def get_query_set(self):
-        return QuerySet(self.model, query=self._query)
-
-    def add(self):
-        #  TODO: ManyToMany Manager  parent_obj.add(related_object)
-        pass
+        return QuerySet(self.model, query=self._query).filter()
 
     def filter(self, *args, **kwargs):
         if "id__in" in kwargs:
             raise NotImplementedError("'id__in' does not allow ManyToManyManager.")
-        return super(ManyToManyManager, self).filter(*args, **kwargs)
+        return QuerySet(self.model, query=self._query).filter(*args, **kwargs)
+
+    def add(self, *objs):
+        """
+
+        .. note::
+            After executing a add method, does not execute saving. You must be manual operation to the save method.
+
+        .. todo::
+            signal save
+
+        """
+        if objs:
+            resource_models = getattr(self._instance, self.model._model_name)
+            query_ids = self._query.get("id__in", [])
+            for obj in objs:
+                resource_uri = getattr(obj, "resource_uri")
+
+                resource_models.append(resource_uri)
+                query_ids.append(parse_id(resource_uri))
+            self._query.update({"id__in": list(set(query_ids))})
+            setattr(self._instance, self.model._model_name, list(set(resource_models)))
+
+    def remove(self, *objs):
+        """
+
+        .. note::
+            After executing a add method, does not execute saving. You must be manual operation to the save method.
+
+        .. todo::
+            signal save
+
+        """
+        if objs:
+            resource_models = getattr(self._instance, self.model._model_name)
+            query_ids = self._query.get("id__in", [])
+            for obj in objs:
+                resource_uri = getattr(obj, "resource_uri")
+
+                resource_models.remove(resource_uri)
+                query_ids.remove(parse_id(resource_uri))
+            self._query.update({"id__in": list(set(query_ids))})
+            setattr(self._instance, self.model._model_name, list(set(resource_models)))
+
+    def clear(self):
+        """
+
+        .. note::
+            After executing a add method, does not execute saving. You must be manual operation to the save method.
+
+        .. todo::
+            signal save
+
+        """
+        self._query.update({"id__in": list()})
+        setattr(self._instance, self.model._model_name, list())
 
 
-def parse_id(resouce_uri):
+def parse_id(resource_uri):
     """ url parsing
 
     :param resource_uri:
     :rtype: str
     :return: primary id
     """
-    return resouce_uri.split("/")[::-1][1]
+    return resource_uri.split("/")[::-1][1]
 
 
 class Response(object):
@@ -392,7 +454,8 @@ class Response(object):
         model = self.model.clone(attr)
         url = self._response[attr]
         if related_type == "to_many":
-            return self._to_many_class(model=model, query={"id__in": [parse_id(u) for u in url]})
+            return self._to_many_class(model=model,
+                   query={"id__in": [parse_id(u) for u in url]}, instance=self.model)
         elif related_type == "to_one":
             return self._to_one_class(model=model, url=url)
 
@@ -426,6 +489,7 @@ class Response(object):
     def save(self):
         """ save saved response """
         self.model.save()
+        self.__response = self.model._get_fields()
 
     def delete(self):
         """ remove saved response """
@@ -548,7 +612,6 @@ def model_gen(**configs):
                             raise FieldTypeError(
                                 "'{0}' is '{1}' type. ( Input '{2}:{3}' )"
                                     .format(field, field_type, value, type(value).__name__))
-                 #  TODO: ManyToMany Manager  parent_obj.add(related_object)
                 if field_type == "related":
                     value = getattr(value, "resource_uri", value)
                     if self._schema_store["fields"][field]["related_type"] == "to_many":

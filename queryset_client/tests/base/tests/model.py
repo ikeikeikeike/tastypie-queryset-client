@@ -1,3 +1,4 @@
+# encoding: utf-8
 from testcases import (
     TestServerTestCase,
     get_client
@@ -137,12 +138,12 @@ class ModelTestCase(TestServerTestCase):
             inbox_message.inbox = inbox
             inbox_message.save()  # TODO: save success
 
-    def test_save_rel1(self):
-        """ relation """
-    #    subject = ""
-    #    body = ""
-    #    message = self.client.inbox_message(subject=subject, body=body)
-    #    message.save()
+#    def test_save_rel1(self):
+#        """ relation """
+#        subject = ""
+#        body = ""
+#        message = self.client.inbox_message(subject=subject, body=body)
+#        message.save()
 
     def test_save_many1(self):
         """ post """
@@ -157,6 +158,69 @@ class ModelTestCase(TestServerTestCase):
         call_command('loaddata', 'base_data.json')
         for inbox_message_many in self.client.inbox_message_many.objects.all():
             inbox_message_many.save()
+
+    def test_save_many3(self):
+        """ add, remove, clear
+
+        * Check resource_uri  (response, field)
+
+
+        """
+        call_command('loaddata', 'base_data.json')
+
+        inbox_messages = []
+        inbox_message_many = self.client.inbox_message_many.objects.get(id=2)
+        count_orig = inbox_message_many.inbox_message.count()
+
+        for i in range(0, 5):
+            message = self.client.message()
+            message.subject = id_generator()
+            message.body = id_generator()
+            message.save()
+
+            inbox = self.client.inbox()
+            inbox.did = id_generator()
+            inbox.save()
+
+            inbox_message = self.client.inbox_message()
+            inbox_message.message = message
+            inbox_message.inbox = inbox
+            inbox_message.save()
+
+            inbox_messages.append(inbox_message)
+            inbox_message_many.inbox_message.add(inbox_message)
+        inbox_message_many.save()
+        self.assertTrue(
+            inbox_message_many._response["inbox_message"] == inbox_message_many.model.inbox_message)
+
+        inbox_all = inbox_message_many.inbox_message.all()
+        for obj, obj_ in zip(inbox_all, inbox_message_many.inbox_message.filter()):
+            self.assertTrue(obj.id == obj_.id)
+
+        inbox_all_ = self.client.inbox_message.objects.filter(id__in=inbox_all._query["id__in"])
+        self.assertTrue(len(inbox_all) == len(inbox_all_))
+        for obj, obj_ in zip(inbox_all, inbox_all_):
+            self.assertTrue(obj.id == obj_.id)
+
+        ids = inbox_all._query["id__in"]
+        inbox_message_many = self.client.inbox_message_many.objects.get(id=2)
+        num = inbox_message_many.inbox_message.filter(id=ids[0]).count()
+        self.assertTrue(num == 1)
+
+        # remove
+        inbox_message_many.inbox_message.remove(*inbox_messages)
+        self.assertTrue(count_orig == inbox_message_many.inbox_message.count())
+        inbox_message_many.save()
+        self.assertTrue(count_orig == inbox_message_many.inbox_message.count())
+
+        # clear  TODO: Issue #??
+#        inbox_message_many.inbox_message.clear()
+#        self.assertTrue(0 != inbox_message_many.inbox_message.count())
+#        inbox_message_many.save()
+#        self.assertTrue(0 == inbox_message_many.inbox_message.count())
+
+        inbox_message_many.save()
+
 
     def test_delete1(self):
         subject = "subject delete 1"
