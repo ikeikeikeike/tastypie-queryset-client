@@ -54,7 +54,7 @@ class QuerySet(object):
         if len(self) < 1:
             raise StopIteration()
         index, length = 0, 0
-        klass = self._clone(self._responses)  #  klass = copy.deepcopy(self)
+        klass = self._clone(self._responses)  # klass = copy.deepcopy(self)
         while 1:
             try:
                 yield klass._objects[index]
@@ -222,11 +222,11 @@ class QuerySet(object):
 
         .. note:: No request args(Empty request params).
 
-            - × e.p. id__in=[] -> http://no.com/?any=search
-            - ○ e.p. id__in=[] -> http://no.com/?any=search&id__in=
+            -  * e.g. id__in=[] -> http://no.com/?any=search
+            -  o e.g. id__in=[] -> http://no.com/?any=search&id__in=
 
 
-        .. note:: overwrite, id__in
+        .. note:: Overwrite id__in
 
         """
 
@@ -598,7 +598,7 @@ def model_gen(**configs):
                         if field_type == "string":
                             pass
                         elif field_type == "integer":
-                            pass  #  input safe
+                            pass   # input safe
                         elif field_type == "datetime":
                             value = value.isoformat()
                         elif field_type == "time":
@@ -707,7 +707,7 @@ class Client(object):
     def __init__(self, base_url, auth=None, strict_field=True, client=None):
         """
 
-        :param str base_url: e.p. http://api.base.biz/base/v1/
+        :param str base_url: e.g. http://api.base.biz/base/v1/
         :param auth:
         :param bool strict_field: strict field and convert value in field.
         :param object client:
