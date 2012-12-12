@@ -734,7 +734,10 @@ class Client(object):
         request_url = self._url_gen(url)
         s = self._main_client._store
         requests = s["session"]
-        serializer = slumber.serialize.Serializer(default_format=s["format"])
+        try:
+            serializer = slumber.serialize.Serializer(default_format=s["format"])
+        except TypeError:
+            serializer = slumber.serialize.Serializer(default=s["format"])
         return serializer.loads(requests.request(method, request_url).content)
 
     def schema(self, model_name=None):
