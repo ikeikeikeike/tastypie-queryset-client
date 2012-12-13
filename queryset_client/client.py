@@ -577,6 +577,9 @@ def model_gen(**configs):
                                 check_type = True
                             elif field_type == "boolean":
                                 check_type = True
+                            elif field_type == "float":
+                                if isinstance(value, float):
+                                    check_type = True
                             if field_type == "related":
                                 check_type = True
                         except Exception, err:
