@@ -93,3 +93,22 @@ class Status(models.Model):
 
     def __unicode__(self):
         return u"operation: {0}, contenttype: {1}, status: {2}".format(self.operation, self.contenttype, self.status)
+
+
+class Strict(models.Model):
+    """ For strict field """
+    integer_test = models.IntegerField('integer', null=True)
+    float_test = models.FloatField('float', null=True)
+    decimal_test = models.DecimalField('decimal', max_digits=5, decimal_places=2, null=True)
+    # boolean_test = models.BooleanField('boolean')
+    # generic_ip_address_test = models.
+
+    ctime = models.DateTimeField(ugettext("ctime"), auto_now_add=True)
+    utime = models.DateTimeField(ugettext("utime"), auto_now=True)
+
+    class Meta:
+        verbose_name = ugettext("strict")
+        verbose_name_plural = ugettext("stricts")
+
+    def __unicode__(self):
+        return u"{0}".format(self.pk)
