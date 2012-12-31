@@ -1,3 +1,4 @@
+from decimal import Decimal
 from datetime import datetime
 #from django.conf import settings
 #settings.DEBUG = True
@@ -18,12 +19,12 @@ class StrictTestCase(TestServerTestCase):
     def tearDown(self):
         self.stop_test_server()
 
-    def test_getDateTimeField1(self):
+    def test_getDateTimeField(self):
         call_command('loaddata', 'small_data.json')
         for i in self.client.inbox_message.objects.all():
             self.assertTrue(isinstance(i.ctime, datetime))
 
-    def test_setDateTimeField1(self):
+    def test_setDateTimeField(self):
         ctime = datetime.now()
         utime = datetime.now()
         message = self.client.message(
@@ -37,15 +38,65 @@ class StrictTestCase(TestServerTestCase):
         message_ = self.client.message.objects.get(id=message.id)
         self.assertTrue(message.id == message_.id)
 
-    def test_DecimalField1(self):
-        pass
+    # def test_DecimalField(self):
+        # decimal_test = Decimal('0.2')
 
-    def test_FloatField1(self):
-        pass
+        # # Test save
+        # strict = self.client.strict(decimal_test=decimal_test)
+        # strict.save()
 
-    def test_IntegerField1(self):
+        # # Tests
+        # self.assertTrue(isinstance(strict.decimal_test, decimal_test))
+        # self.assertTrue(strict.decimal_test == decimal_test)
+
+        # # Get
+        # strict_ = self.client.strict.objects.get(id=strict.id)
+        # self.assertTrue(strict.id == strict_.id)
+
+        # # Search
+        # strict_ = self.client.strict.objects.filter(decimal_test=decimal_test)
+        # self.assertTrue(strict_.count() == 1)
+
+    def test_FloatField(self):
+        float_test = float(0.2)
+
+        # Test save
+        strict = self.client.strict(float_test=float_test)
+        strict.save()
+
+        # Tests
+        self.assertTrue(isinstance(strict.float_test, float))
+        self.assertTrue(strict.float_test == float_test)
+
+        # Get
+        strict_ = self.client.strict.objects.get(id=strict.id)
+        self.assertTrue(strict.id == strict_.id)
+
+        # Search
+        strict_ = self.client.strict.objects.filter(float_test=float_test)
+        self.assertTrue(strict_.count() == 1)
+
+    def test_IntegerField(self):
+        integer_test = 10
+
+        # Test save
+        strict = self.client.strict(integer_test=integer_test)
+        strict.save()
+
+        # Tests
+        self.assertTrue(isinstance(strict.integer_test, int))
+        self.assertTrue(strict.integer_test == integer_test)
+
+        # Get
+        strict_ = self.client.strict.objects.get(id=strict.id)
+        self.assertTrue(strict.id == strict_.id)
+
+        # Search
+        strict_ = self.client.strict.objects.filter(integer_test=integer_test)
+        self.assertTrue(strict_.count() == 1)
+
+    def test_BooleanField(self):
         pass
 
     def test_GenericIPAddressField(self):
         pass
-
