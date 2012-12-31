@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
+# import decimal
 import copy
-import slumber
 import urlparse
+import slumber
 
 
 __all__ = ["Client"]
@@ -566,6 +567,12 @@ def model_gen(**configs):
                                     check_type = value.isdigit()
                                 elif isinstance(value, int):
                                     check_type = True
+                            elif field_type == "float":
+                                if isinstance(value, float):
+                                    check_type = True
+                            # elif field_type == "decimal":
+                                # if isinstance(value, decimal.Decimal):
+                                    # check_type = True
                             elif field_type == "datetime":
                                 if isinstance(value, (str, unicode)):
                                     try:
@@ -598,6 +605,8 @@ def model_gen(**configs):
                         if field_type == "string":
                             pass
                         elif field_type == "integer":
+                            pass   # input safe
+                        elif field_type == "float":
                             pass   # input safe
                         elif field_type == "datetime":
                             value = value.isoformat()

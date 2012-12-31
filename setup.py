@@ -2,7 +2,7 @@ import os
 from setuptools import setup, find_packages
 # from setuptools.command.test import test
 
-version = '0.6.4'
+version = '0.7.1'
 name = 'tastypie-queryset-client'
 short_description = 'Client for Tastypie. Provide operation similar to the Django Model API'
 long_description = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
@@ -28,21 +28,21 @@ setup(
 #       'Environment :: Console',
        "Environment :: Web Environment",
        "Intended Audience :: Developers",
-       'License :: OSI Approved :: MIT License',
+       "License :: OSI Approved :: MIT License",
        "Programming Language :: Python :: 2.6",
        "Programming Language :: Python :: 2.7",
-       'Topic :: Utilities',
-       'Topic :: Software Development :: Libraries :: Python Modules',
+       "Topic :: Utilities",
+       "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    keywords=['tastypie', 'client', 'django', 'rest', 'api', ],
-    author='Tatsuo Ikeda',
-    author_email='jp.ne.co.jp at gmail',
-    url='https://github.com/ikeikeikeike/tastypie-queryset-client',
-    license='MIT License',
+    keywords=["tastypie", "client", "django", "rest", "api", ],
+    author="Tatsuo Ikeda",
+    author_email="jp.ne.co.jp at gmail",
+    url="https://github.com/ikeikeikeike/tastypie-queryset-client",
+    license="MIT License",
     packages=find_packages(),
     include_package_data=True,
     data_files=data_files,
-    install_requires=["slumber"],
+    install_requires=["slumber==0.4.2", "requests==0.14.2"],
     # cmdclass={'test': pytest_test},
     # tests_require=['pytest'],
 )

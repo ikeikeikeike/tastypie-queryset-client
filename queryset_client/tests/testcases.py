@@ -1,7 +1,7 @@
-import sys
+# import sys
 import socket
 import threading
-from StringIO import StringIO
+# from StringIO import StringIO
 
 from django.core.handlers.wsgi import WSGIHandler
 from django.core.servers import basehttp
@@ -11,8 +11,8 @@ from django.core.management import call_command
 from queryset_client import Client
 
 # ignore out and err.
-sys.stdout = StringIO()
-sys.stderr = StringIO()
+# sys.stdout = StringIO()
+# sys.stderr = StringIO()
 
 
 class StoppableWSGIServer(basehttp.WSGIServer):
