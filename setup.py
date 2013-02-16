@@ -2,7 +2,7 @@ import os
 from setuptools import setup, find_packages
 # from setuptools.command.test import test
 
-version = '0.7.1'
+version = '0.7.2'
 name = 'tastypie-queryset-client'
 short_description = 'Client for Tastypie. Provide operation similar to the Django Model API'
 long_description = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
@@ -42,7 +42,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     data_files=data_files,
-    install_requires=["slumber==0.4.2", "requests==0.14.2"],
+    install_requires=["slumber", "requests"],
     # cmdclass={'test': pytest_test},
     # tests_require=['pytest'],
 )
