@@ -38,24 +38,24 @@ class StrictTestCase(TestServerTestCase):
         message_ = self.client.message.objects.get(id=message.id)
         self.assertTrue(message.id == message_.id)
 
-    # def test_DecimalField(self):
-        # decimal_test = Decimal('0.2')
+    def test_DecimalField(self):
+        decimal_test = Decimal('0.2')
 
-        # # Test save
-        # strict = self.client.strict(decimal_test=decimal_test)
-        # strict.save()
+        # Test save
+        strict = self.client.strict(decimal_test=decimal_test)
+        strict.save()
 
-        # # Tests
-        # self.assertTrue(isinstance(strict.decimal_test, decimal_test))
-        # self.assertTrue(strict.decimal_test == decimal_test)
+        # Tests
+        self.assertTrue(isinstance(strict.decimal_test, Decimal))
+        self.assertTrue(strict.decimal_test == decimal_test)
 
-        # # Get
-        # strict_ = self.client.strict.objects.get(id=strict.id)
-        # self.assertTrue(strict.id == strict_.id)
+        # Get
+        strict_ = self.client.strict.objects.get(id=strict.id)
+        self.assertTrue(strict.id == strict_.id)
 
-        # # Search
-        # strict_ = self.client.strict.objects.filter(decimal_test=decimal_test)
-        # self.assertTrue(strict_.count() == 1)
+        # Search
+        strict_ = self.client.strict.objects.filter(decimal_test=decimal_test)
+        self.assertTrue(strict_.count() == 1)
 
     def test_FloatField(self):
         float_test = float(0.2)
@@ -95,8 +95,8 @@ class StrictTestCase(TestServerTestCase):
         strict_ = self.client.strict.objects.filter(integer_test=integer_test)
         self.assertTrue(strict_.count() == 1)
 
-    def test_BooleanField(self):
-        pass
+    # def test_BooleanField(self):
+        # pass
 
-    def test_GenericIPAddressField(self):
-        pass
+    # def test_GenericIPAddressField(self):
+        # pass

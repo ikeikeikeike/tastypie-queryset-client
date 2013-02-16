@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
-# import decimal
 import copy
-import urlparse
+import decimal
 import slumber
+import urlparse
 
 
 __all__ = ["Client"]
@@ -221,11 +221,10 @@ class QuerySet(object):
     def _filter(self, *args, **kwargs):
         """
 
-        .. note:: No request args(Empty request params).
+        .. note:: No request args(== Empty request params).
 
             -  * e.g. id__in=[] -> http://no.com/?any=search
             -  o e.g. id__in=[] -> http://no.com/?any=search&id__in=
-
 
         .. note:: Overwrite id__in
 
@@ -354,7 +353,7 @@ class ManyToManyManager(Manager):
 
     def filter(self, *args, **kwargs):
         if "id__in" in kwargs:
-            raise NotImplementedError("'id__in' does not allow ManyToManyManager.")
+            raise NotImplementedError("'id__in' does not allowed in ManyToManyManager.")
         return QuerySet(self.model, query=self._query).filter(*args, **kwargs)
 
     def add(self, *objs):
@@ -418,7 +417,7 @@ def parse_id(resource_uri):
 
     :param resource_uri:
     :rtype: str
-    :return: primary id
+    :return: Primary id
     """
     return resource_uri.split("/")[::-1][1]
 
@@ -427,8 +426,8 @@ class Response(object):
     """ Proxy Model Class """
     def __init__(self, model, response=None, url=None, **kwargs):
         """
-        :param model: The Model
-        :param response: response from Client Library
+        :param model: The Model.
+        :param response: Response from client library.
         """
         self.__response = response or dict()
         self._schema = model.schema()
@@ -570,9 +569,9 @@ def model_gen(**configs):
                             elif field_type == "float":
                                 if isinstance(value, float):
                                     check_type = True
-                            # elif field_type == "decimal":
-                                # if isinstance(value, decimal.Decimal):
-                                    # check_type = True
+                            elif field_type == "decimal":
+                                value = decimal.Decimal(value)
+                                check_type = isinstance(value, decimal.Decimal)
                             elif field_type == "datetime":
                                 if isinstance(value, (str, unicode)):
                                     try:
@@ -607,6 +606,8 @@ def model_gen(**configs):
                         elif field_type == "integer":
                             pass   # input safe
                         elif field_type == "float":
+                            pass   # input safe
+                        elif field_type == "decimal":
                             pass   # input safe
                         elif field_type == "datetime":
                             value = value.isoformat()
@@ -670,7 +671,8 @@ def model_gen(**configs):
             if hasattr(self, "id"):
                 self._client(self.id).put(self._get_fields())  # return bool
             else:
-                self._setattrs(**self._client.post(self._get_fields()))
+                self._client.post(self._get_fields())
+                self._setattrs(**self._client._handle_redirect(self._client._))
 
         def delete(self):
             """ delete
@@ -743,7 +745,7 @@ class Client(object):
         request_url = self._url_gen(url)
         s = self._main_client._store
         requests = s["session"]
-        serializer = slumber.serialize.Serializer(default_format=s["format"])
+        serializer = slumber.serialize.Serializer(default=s["format"])
         return serializer.loads(requests.request(method, request_url).content)
 
     def schema(self, model_name=None):
@@ -778,4 +780,4 @@ class Client(object):
         return model_gen(
             main_client=self._main_client, model_name=model_name,
             endpoint=schema[model_name]["list_endpoint"], schema=schema[model_name]["schema"],
-            strict_field=strict_field, base_client=base_client or copy.deepcopy(self))
+            strict_field=strict_field, base_client=base_client or copy.copy(self))
