@@ -1,6 +1,10 @@
 History
 --------
 
+0.7.2 (2012-02-17)
+~~~~~~~~~~~~~~~~~~~~~~
+* Support decimal field. (In ver py2.7)
+
 0.7.1rc1 (2012-12-31)
 ~~~~~~~~~~~~~~~~~~~~~~
 * Support issue `#34 <https://github.com/ikeikeikeike/tastypie-queryset-client/issues/34>`_
