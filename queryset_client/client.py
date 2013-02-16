@@ -671,7 +671,8 @@ def model_gen(**configs):
             if hasattr(self, "id"):
                 self._client(self.id).put(self._get_fields())  # return bool
             else:
-                self._setattrs(**self._client.post(self._get_fields()))
+                self._client.post(self._get_fields())
+                self._setattrs(**self._client._handle_redirect(self._client._))
 
         def delete(self):
             """ delete
@@ -744,7 +745,7 @@ class Client(object):
         request_url = self._url_gen(url)
         s = self._main_client._store
         requests = s["session"]
-        serializer = slumber.serialize.Serializer(default_format=s["format"])
+        serializer = slumber.serialize.Serializer(default=s["format"])
         return serializer.loads(requests.request(method, request_url).content)
 
     def schema(self, model_name=None):
@@ -779,4 +780,4 @@ class Client(object):
         return model_gen(
             main_client=self._main_client, model_name=model_name,
             endpoint=schema[model_name]["list_endpoint"], schema=schema[model_name]["schema"],
-            strict_field=strict_field, base_client=base_client or copy.deepcopy(self))
+            strict_field=strict_field, base_client=base_client or copy.copy(self))
