@@ -1,7 +1,7 @@
 History
 --------
 
-0.7.2 (2012-02-17)
+0.7.2 (2013-02-17)
 ~~~~~~~~~~~~~~~~~~~~~~
 * Support decimal field. (In ver py2.7)
 * Support new slumber and requests package.
